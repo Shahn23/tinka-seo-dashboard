@@ -149,10 +149,12 @@ NZ_ONPAGE_ERRORS = [
 ]
 
 
-def seed_db(db_path: str):
-    """Seed the database with all sample data."""
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from src.database import Database
+def seed_all(db: "Database") -> None:
+    """Seed a pre-initialized database with all sample data.
+
+    Takes an active Database instance. Used by dashboard auto-init
+    and by seed_db() for CLI usage.
+    """
     from src.models import (
         ContentIdea,
         Domain,
@@ -161,6 +163,149 @@ def seed_db(db_path: str):
         RankRecord,
         SeoIssue,
     )
+
+    import random as rng_mod
+    import json
+    from datetime import datetime
+
+    # 1. Seed domains
+    domain_map = {}
+    for url, label, primary in DOMAINS:
+        d = Domain(url=url, label=label, is_primary=primary)
+        domain_id = db.upsert_domain(d)
+        if "au" in url.lower():
+            domain_map["AU"] = domain_id
+        if "nz" in url.lower():
+            domain_map["NZ"] = domain_id
+
+    # 2. Keywords & rank history
+    kw_count = 0
+    rank_count = 0
+    today = datetime.utcnow()
+    for region, kw_list in [("AU", AU_KEYWORDS), ("NZ", NZ_KEYWORDS)]:
+        dom_id = domain_map[region]
+        rng = rng_mod.Random(f"seed-{region}")
+        for kw_text, vol, diff, cpc in kw_list:
+            kw = Keyword(keyword=kw_text, domain_id=dom_id,
+                         monthly_volume=vol, keyword_difficulty=diff, cpc=cpc)
+            kw_id = db.upsert_keyword(kw)
+            kw_count += 1
+
+            # Generate 90 days of rank history (mock GSC data)
+            for day_offset in range(90):
+                date = (today - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+                pos = rng.randint(3, 45)
+                impressions = rng.randint(50, 2000)
+                ctr_val = rng.uniform(0.01, 0.15)
+                clicks = max(1, int(impressions * ctr_val))
+                rr = RankRecord(
+                    keyword_id=kw_id,
+                    domain_id=dom_id,
+                    date=date,
+                    position=pos,
+                    clicks=clicks,
+                    impressions=impressions,
+                    ctr=ctr_val,
+                )
+                db.upsert_rank(rr)
+                rank_count += 1
+
+    print(f"[seed] Keywords: {kw_count}, Rank history: {rank_count} records")
+
+    # 3. SEO Issues
+    issue_count = 0
+    for region, issue_type, severity, detail, fix in SEO_ISSUES:
+        dom_id = domain_map[region]
+        si = SeoIssue(
+            domain_id=dom_id,
+            issue_type=issue_type,
+            severity=severity,
+            detail=detail,
+            suggested_fix=fix,
+            status="open",
+        )
+        db.upsert_issue(si)
+        issue_count += 1
+    print(f"[seed] Issues: {issue_count}")
+
+    # 4. Content Ideas
+    idea_count = 0
+    for title, kw, priority, effort in CONTENT_IDEAS:
+        ci = ContentIdea(
+            title=title,
+            target_keyword=kw,
+            priority=priority,
+            effort=effort,
+            source="manual",
+            status="draft",
+        )
+        db.upsert_content_idea(ci)
+        idea_count += 1
+
+    for title, kw, priority, effort in BACKLOG_IDEAS:
+        ci = ContentIdea(
+            title=title,
+            target_keyword=kw,
+            priority=priority,
+            effort=effort,
+            source="backlog_csv",
+            status="backlog",
+        )
+        db.upsert_content_idea(ci)
+        idea_count += 1
+    print(f"[seed] Content ideas: {idea_count}")
+
+    # 5. On-Page Errors
+    for url, err_type, severity, detail, fix in AU_ONPAGE_ERRORS:
+        oe = OnPageError(
+            url=url,
+            domain_id=domain_map["AU"],
+            error_type=err_type,
+            severity=severity,
+            detail=detail,
+            suggested_fix=fix,
+            status="open",
+            check_batch="seed-2026-05-31",
+        )
+        db.upsert_onpage_error(oe)
+
+    for url, err_type, severity, detail, fix in NZ_ONPAGE_ERRORS:
+        oe = OnPageError(
+            url=url,
+            domain_id=domain_map["NZ"],
+            error_type=err_type,
+            severity=severity,
+            detail=detail,
+            suggested_fix=fix,
+            status="open",
+            check_batch="seed-2026-05-31",
+        )
+        db.upsert_onpage_error(oe)
+
+    # Seed fixed errors to show lifecycle
+    for url, err_type, _, detail, fix in AU_ONPAGE_ERRORS[:2]:
+        fixed = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        oe = OnPageError(
+            url=url,
+            domain_id=domain_map["AU"],
+            error_type=err_type,
+            severity="warning",
+            detail=detail,
+            suggested_fix=fix,
+            status="fixed",
+            check_batch="seed-fixed",
+            fixed_at=fixed,
+        )
+        db.upsert_onpage_error(oe)
+
+    print(f"[seed] On-page errors: {len(AU_ONPAGE_ERRORS) + len(NZ_ONPAGE_ERRORS) + 2}")
+    print("[seed] Done.")
+
+
+def seed_db(db_path: str):
+    """Seed the database with all sample data (CLI entry point)."""
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from src.database import Database
 
     schema_path = os.path.join(os.path.dirname(db_path), "schema.sql")
     db = Database(db_path, schema_path)

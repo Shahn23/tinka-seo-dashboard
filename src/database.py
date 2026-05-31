@@ -28,8 +28,14 @@ class Database:
 
     def __init__(self, db_path: str, schema_path: str | None = None):
         self.db_path = db_path
+        self._schema_path = schema_path
         if schema_path and not os.path.exists(db_path):
             self._init_schema(schema_path)
+
+    def init_schema(self) -> None:
+        """(Re)initialize the database schema. Safe to call if tables exist."""
+        if self._schema_path and os.path.exists(self._schema_path):
+            self._init_schema(self._schema_path)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

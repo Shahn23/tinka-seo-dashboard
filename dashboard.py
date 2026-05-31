@@ -38,18 +38,34 @@ st.set_page_config(
 )
 
 
+# ── Auto-Init (for cloud deployment where DB may not exist) ──────────────────
+def ensure_db_initialized(db_instance: Database) -> None:
+    """Initialize and seed the database if it's empty (cloud deployment)."""
+    try:
+        summary = db_instance.dashboard_summary()
+        if summary["keywords_tracked"] == 0:
+            with st.spinner("Initializing database with seed data..."):
+                db_instance.init_schema()
+                from scripts.seed_data import seed_all
+                seed_all(db_instance)
+                st.rerun()
+    except Exception as e:
+        st.info("Setting up database for first use...")
+        db_instance.init_schema()
+        from scripts.seed_data import seed_all
+        try:
+            seed_all(db_instance)
+            st.rerun()
+        except Exception as seed_err:
+            st.warning(f"Could not seed data automatically: {seed_err}")
+
 # ── Database Connection ──────────────────────────────────────────────────────
 @st.cache_resource
 def get_db() -> Database:
     """Get or create the database connection (cached across reruns)."""
     db = Database(DB_PATH, SCHEMA_PATH)
-    # Verify it has data
-    try:
-        summary = db.dashboard_summary()
-        if summary["keywords_tracked"] == 0:
-            st.warning("Database is empty. Run `python scripts/seed_data.py` to populate with sample data.")
-    except Exception:
-        st.error("Database not initialized. Run `python scripts/init_db.py` first.")
+    # Auto-init if needed (cloud deployment / fresh environment)
+    ensure_db_initialized(db)
     return db
 
 
