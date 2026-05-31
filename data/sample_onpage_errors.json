@@ -1,0 +1,18 @@
+[
+  {"page_url": "https://giantbubblesau.com/", "type": "missing_title", "severity": "critical", "detail": "Homepage missing meta title", "fix": "Add <title>Giant Bubbles Australia | Bubble Kits & Party Entertainment</title>"},
+  {"page_url": "https://giantbubblesau.com/", "type": "missing_meta", "severity": "critical", "detail": "Homepage missing meta description", "fix": "Add meta description with primary keywords"},
+  {"page_url": "https://giantbubblesau.com/shop/", "type": "slow_page", "severity": "critical", "detail": "Shop page load time exceeds 4s", "fix": "Optimize product images, enable caching"},
+  {"page_url": "https://giantbubblesau.com/shop/giant-bubble-kit", "type": "dup_title", "severity": "warning", "detail": "Title duplicates other product pages", "fix": "Write unique title for this product"},
+  {"page_url": "https://giantbubblesau.com/shop/bubble-wand", "type": "img_broken", "severity": "warning", "detail": "Product image returns 404", "fix": "Fix image URL or upload replacement"},
+  {"page_url": "https://giantbubblesau.com/about", "type": "thin_content", "severity": "critical", "detail": "About page has only 150 words", "fix": "Expand to 500+ words with relevant keywords"},
+  {"page_url": "https://giantbubblesau.com/blog/", "type": "no_h1", "severity": "warning", "detail": "Blog index missing H1 tag", "fix": "Add H1 with keyword-rich title"},
+  {"page_url": "https://giantbubblesau.com/contact", "type": "no_meta", "severity": "info", "detail": "Contact page missing meta description", "fix": "Add meta description"},
+  {"page_url": "https://giantbubblesau.com/blog/giant-bubble-recipes", "type": "not_indexed", "severity": "warning", "detail": "Post not indexed after 2 weeks", "fix": "Check noindex tags and submit to GSC"},
+  {"page_url": "https://giantbubbles.co.nz/", "type": "missing_title", "severity": "critical", "detail": "Landing page missing title tag", "fix": "Add <title>Giant Bubbles NZ | Bubble Entertainment Auckland</title>"},
+  {"page_url": "https://giantbubbles.co.nz/", "type": "no_meta", "severity": "warning", "detail": "Missing meta description", "fix": "Add meta description with location keywords"},
+  {"page_url": "https://giantbubbles.co.nz/services", "type": "thin", "severity": "warning", "detail": "Services page has only 180 words", "fix": "Add detailed service descriptions"},
+  {"page_url": "https://giantbubbles.co.nz/blog", "type": "no_robots.txt", "severity": "critical", "detail": "robots.txt blocking /blog/", "fix": "Update robots.txt to allow blog indexing"},
+  {"page_url": "https://giantbubbles.co.nz/contact", "type": "canonical", "severity": "info", "detail": "Canonical points to wrong domain", "fix": "Fix canonical tag for NZ domain"},
+  {"page_url": "https://giantbubbles.co.nz/gallery", "type": "img_broken", "severity": "warning", "detail": "Gallery image missing alt text", "fix": "Add descriptive alt text to all images"},
+  {"page_url": "https://giantbubbles.co.nz/pricing", "type": "no_meta", "severity": "info", "detail": "Pricing page missing meta description", "fix": "Add meta description"}
+]
