@@ -1,659 +1,510 @@
-#!/usr/bin/env python3
+"""SEO Dashboard — Giant Bubbles by Tinka
+Streamlit 4-tab dashboard connecting to SQLite DB with GSC data, SEO issues, content ideas.
+
+Usage: uv run streamlit run dashboard.py --server.headless true --server.port 8501
 """
-Tinka SEO Dashboard — Streamlit Multi-Page Dashboard
-
-Integrates keyword rankings (GSC), on-page errors, and content ideas
-into a single live dashboard with filters, charts, and tables.
-"""
-
-from __future__ import annotations
-
+import sqlite3
+import subprocess
+import json
 import os
-import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# ── Path setup ──────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, BASE_DIR)
+# ── Page config ──────────────────────────────────────────────────────────────
+st.set_page_config(page_title="SEO Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-from src.database import Database
-from src.models import ERROR_TYPES
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(PROJECT_DIR, "data", "seo_dashboard.db")
 
-# ── Constants ────────────────────────────────────────────────────────────────
-DB_PATH = os.path.join(BASE_DIR, "data", "seo_dashboard.db")
-SCHEMA_PATH = os.path.join(BASE_DIR, "data", "schema.sql")
-REFRESH_INTERVAL = 3600  # seconds
+# ── Custom CSS ───────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+    .metric-card { background: #1a1c2e; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #2a2d4a; }
+    .metric-card h3 { margin: 0; font-size: 28px; font-weight: 700; color: #00d4aa; }
+    .metric-card p { margin: 4px 0 0; font-size: 13px; color: #8888aa; }
+    .severity-critical { display: inline-block; background: #ff4444; color: white; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .severity-high { display: inline-block; background: #ff8800; color: white; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .severity-moderate { display: inline-block; background: #ffcc00; color: #222; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .quick-win { background: linear-gradient(135deg, #002b1a, #004d2e); border: 1px solid #00d4aa; border-radius: 10px; padding: 10px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 4px; }
+    .stTabs [data-baseweb="tab"] { border-radius: 6px 6px 0 0; padding: 8px 20px; }
+</style>
+""", unsafe_allow_html=True)
 
+# ── Database helpers ─────────────────────────────────────────────────────────
+def get_conn():
+    """Get a read-only connection (WAL mode from init)."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# ── Page Config ──────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Tinka SEO Dashboard",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-
-# ── Auto-Init (for cloud deployment where DB may not exist) ──────────────────
-def ensure_db_initialized(db_instance: Database) -> None:
-    """Initialize and seed the database if it's empty (cloud deployment)."""
+@st.cache_data(ttl=30)
+def query_db(sql, params=()):
+    conn = get_conn()
     try:
-        summary = db_instance.dashboard_summary()
-        if summary["keywords_tracked"] == 0:
-            with st.spinner("Initializing database with seed data..."):
-                db_instance.init_schema()
-                from scripts.seed_data import seed_all
-                seed_all(db_instance)
-                st.rerun()
+        df = pd.read_sql_query(sql, conn, params=params)
+        return df
     except Exception as e:
-        st.info("Setting up database for first use...")
-        db_instance.init_schema()
-        from scripts.seed_data import seed_all
-        try:
-            seed_all(db_instance)
-            st.rerun()
-        except Exception as seed_err:
-            st.warning(f"Could not seed data automatically: {seed_err}")
+        st.error(f"DB query error: {e}")
+        return pd.DataFrame()
+    finally:
+        conn.close()
 
-# ── Database Connection ──────────────────────────────────────────────────────
-@st.cache_resource
-def get_db() -> Database:
-    """Get or create the database connection (cached across reruns)."""
-    db = Database(DB_PATH, SCHEMA_PATH)
-    # Auto-init if needed (cloud deployment / fresh environment)
-    ensure_db_initialized(db)
-    return db
-
-
-db = get_db()
-
+def run_sync():
+    """Run the GSC sync script."""
+    script = os.path.join(PROJECT_DIR, "scripts", "sync_gsc.py")
+    if not os.path.exists(script):
+        return {"status": "error", "message": "sync_gsc.py not found"}
+    try:
+        result = subprocess.run(
+            ["python", script, "--live", "--days", "7"],
+            capture_output=True, text=True, timeout=120, cwd=PROJECT_DIR
+        )
+        return {
+            "status": "success" if result.returncode == 0 else "error",
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "message": "Sync timed out (120s)"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
-st.sidebar.title("📊 Tinka SEO")
-st.sidebar.caption("Giant Bubbles by Tinka")
+st.sidebar.title("🔍 SEO Dashboard")
+st.sidebar.markdown("**Giant Bubbles by Tinka**")
+st.sidebar.markdown("---")
 
-# Domain filter
-domains = db.list_domains()
-domain_options = {"All Domains": None}
-for d in domains:
-    domain_options[d.label] = d.id
+domains_df = query_db("SELECT name, display_name FROM domains WHERE is_active=1")
+domain_options = ["All"] + domains_df["name"].tolist() if not domains_df.empty else ["All"]
+selected_domain = st.sidebar.selectbox("Domain", domain_options)
 
-selected_domain_label = st.sidebar.selectbox(
-    "Domain",
-    list(domain_options.keys()),
-    index=0,
-)
-selected_domain_id = domain_options[selected_domain_label]
+cats_df = query_db("SELECT DISTINCT category FROM keywords ORDER BY category")
+cat_options = ["All"] + cats_df["category"].tolist() if not cats_df.empty else ["All"]
+selected_category = st.sidebar.selectbox("Category", cat_options)
 
-# Keyword search
-keyword_search = st.sidebar.text_input("🔍 Search Keywords", placeholder="e.g., giant bubble")
+intent_options = ["All", "informational", "commercial", "transactional", "navigational"]
+selected_intent = st.sidebar.selectbox("Intent", intent_options)
 
-# Date range
-st.sidebar.subheader("Date Range")
-days_back = st.sidebar.slider("Days of history", 7, 90, 30)
+auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
+if auto_refresh:
+    st.markdown('<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Last auto-refresh: {datetime.now().strftime('%H:%M:%S')}")
-if st.sidebar.button("🔄 Refresh Now"):
-    st.cache_data.clear()
-    st.rerun()
+st.sidebar.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
+# Build WHERE clause
+where_parts = []
+params = []
+if selected_domain != "All":
+    where_parts.append("d.name = ?")
+    params.append(selected_domain)
+if selected_category != "All":
+    where_parts.append("k.category = ?")
+    params.append(selected_category)
+if selected_intent != "All":
+    where_parts.append("k.intent = ?")
+    params.append(selected_intent)
+where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
-# ── Summary Metrics ──────────────────────────────────────────────────────────
-def show_summary_metrics():
-    """Display key metrics in the Overview section."""
-    summary = db.dashboard_summary()
+# ── Tabs ─────────────────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🔑 Keyword Rankings",
+    "🛠️ SEO Issues",
+    "📝 Content Backlog",
+    "🔄 Sync & Settings"
+])
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("Keywords Tracked", summary["keywords_tracked"])
-    with col2:
-        st.metric("Rank Records", summary["rank_records"])
-    with col3:
-        st.metric("Open Issues", summary["open_issues"], delta_color="inverse")
-    with col4:
-        st.metric("Open On-Page Errors", summary["open_onpage_errors"], delta_color="inverse")
-    with col5:
-        st.metric("Content Backlog", summary["backlog_ideas"])
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 1: KEYWORD RANKINGS
+# ═════════════════════════════════════════════════════════════════════════════
+with tab1:
+    st.header("Keyword Rankings")
 
-    # Domains info
-    dom_text = ", ".join([f"{lbl} ({url})" for url, lbl in summary["domains"]])
-    st.caption(f"Domains: {dom_text}")
-
-
-# ── Keyword Rankings Tab ─────────────────────────────────────────────────│─
-def show_keyword_rankings():
-    """Keyword rankings tab with trend charts and filterable table."""
-    st.header("📈 Keyword Rankings")
-    st.caption("Historical position tracking with GSC data")
-
-    # Get current rankings
-    rankings = db.current_rankings(
-        domain_id=selected_domain_id,
-        keyword_filter=keyword_search if keyword_search else None,
-        limit=100,
-    )
-
-    if not rankings:
-        st.info("No ranking data available. Seed the database or sync GSC data.")
-        return
-
-    # Summary table
-    st.subheader("Current Rankings")
-    rank_data = []
-    for r in rankings:
-        pos = r["current_position"]
-        pos_str = f"#{int(pos)}" if pos else "No data"
-        rank_data.append({
-            "Keyword": r["keyword"],
-            "Domain": r["domain_label"],
-            "Position": pos_str,
-            "Position (num)": pos or 99,
-            "Clicks": int(r["total_clicks"] or 0),
-            "Impressions": int(r["total_impressions"] or 0),
-            "CTR": f"{r['ctr']:.1%}" if r["ctr"] else "0%",
-            "Volume": r["monthly_volume"],
-            "Opportunity": r["opportunity_score"],
-        })
-
-    # Color-coded position indicator
-    def pos_color(val):
-        if val is None or val >= 99:
-            return "⬜ No data"
-        if val <= 5:
-            return "🟢 Top 5"
-        if val <= 10:
-            return "🔵 Top 10"
-        if val <= 20:
-            return "🟡 Top 20"
-        return "🔴 >20"
-
-    for r in rank_data:
-        r["Rank"] = pos_color(r["Position (num)"])
-
-    import pandas as pd
-    df = pd.DataFrame(rank_data)
-
-    # Show the table with rank indicator
-    display_cols = ["Keyword", "Domain", "Rank", "Position", "Clicks", "Impressions", "CTR", "Volume", "Opportunity"]
-    st.dataframe(
-        df[display_cols],
-        use_container_width=True,
-        column_config={
-            "Opportunity": st.column_config.NumberColumn(format="%.1f"),
-            "Volume": st.column_config.NumberColumn(format="%d"),
-            "CTR": st.column_config.TextColumn(),
-        },
-        hide_index=True,
-    )
-
-    # Trend chart — show top keywords by opportunity
-    st.subheader("Position Trends (Top 10 Keywords)")
-    top_kw = df.nsmallest(10, "Position (num)")["Keyword"].tolist()
-
-    if top_kw:
-        # Fetch rank history for these keywords
-        keywords = db.list_keywords(domain_id=selected_domain_id)
-        kw_map = {k.keyword: k.id for k in keywords}
-
-        import pandas as pd
-        trend_rows = []
-        for kw_text in top_kw:
-            kw_id = kw_map.get(kw_text)
-            if kw_id is None:
-                continue
-            hist = db.get_rank_history(keyword_id=kw_id, domain_id=selected_domain_id, days=days_back)
-            for h in hist:
-                trend_rows.append({
-                    "Date": h["date"],
-                    "Keyword": kw_text,
-                    "Position": h["position"],
-                })
-
-        if trend_rows:
-            trend_df = pd.DataFrame(trend_rows)
-            trend_df["Date"] = pd.to_datetime(trend_df["Date"])
-            trend_df["Position"] = pd.to_numeric(trend_df["Position"], errors="coerce")
-
-            fig = px.line(
-                trend_df,
-                x="Date",
-                y="Position",
-                color="Keyword",
-                title="Keyword Position Over Time (lower is better)",
-                labels={"Position": "Search Position"},
+    kw_df = query_db(f"""
+        SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent, k.volume,
+               k.opportunity_score, k.difficulty, k.is_high_priority,
+               rh.position AS current_position, rh.clicks, rh.impressions
+        FROM keywords k
+        JOIN domains d ON k.domain_id = d.id
+        LEFT JOIN (
+            SELECT keyword_id, position, clicks, impressions, date
+            FROM rank_history
+            WHERE (keyword_id, date) IN (
+                SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id
             )
-            fig.update_yaxes(autorange="reversed")  # Position 1 is best
-            fig.update_layout(
-                legend=dict(orientation="h", y=-0.3),
-                hovermode="x unified",
-                height=450,
-            )
+        ) rh ON k.id = rh.keyword_id
+        {where_clause}
+        ORDER BY k.volume DESC
+    """, params)
+
+    if not kw_df.empty:
+        # Metric cards
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card"><h3>{len(kw_df)}</h3><p>Keywords Tracked</p></div>
+            """, unsafe_allow_html=True)
+        with col2:
+            avg_pos = kw_df["current_position"].dropna().mean()
+            st.markdown(f"""
+            <div class="metric-card"><h3>{avg_pos:.1f}</h3><p>Avg Position</p></div>
+            """, unsafe_allow_html=True)
+        with col3:
+            total_clicks = int(kw_df["clicks"].dropna().sum())
+            st.markdown(f"""
+            <div class="metric-card"><h3>{total_clicks:,}</h3><p>Total Clicks (7d)</p></div>
+            """, unsafe_allow_html=True)
+        with col4:
+            total_imp = int(kw_df["impressions"].dropna().sum())
+            st.markdown(f"""
+            <div class="metric-card"><h3>{total_imp:,}</h3><p>Total Impressions (7d)</p></div>
+            """, unsafe_allow_html=True)
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            # Volume by category
+            vol_cat = kw_df.groupby("category")["volume"].sum().reset_index().sort_values("volume", ascending=True)
+            fig = px.bar(vol_cat, x="volume", y="category", orientation="h",
+                         title="Search Volume by Category",
+                         color_discrete_sequence=["#00d4aa"],
+                         labels={"volume": "Monthly Searches", "category": ""})
+            fig.update_layout(height=300, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font_color="#ccc", margin=dict(l=0, r=0, t=30, b=0))
             st.plotly_chart(fig, use_container_width=True)
 
-    # Position distribution
-    st.subheader("Position Distribution")
-    pos_data = [r["Position (num)"] for r in rank_data if r["Position (num)"] < 99]
-    if pos_data:
-        dist_fig = px.histogram(
-            x=pos_data,
-            nbins=20,
-            title="Distribution of Keyword Positions",
-            labels={"x": "Position"},
-        )
-        dist_fig.update_layout(height=350)
-        st.plotly_chart(dist_fig, use_container_width=True)
-
-    # Quick Wins section
-    st.subheader("⚡ Quick Wins")
-    quick_wins = db.get_quick_wins(domain_id=selected_domain_id, limit=10)
-    if quick_wins:
-        qw_data = []
-        for w in quick_wins:
-            qw_data.append({
-                "Keyword": w["keyword"],
-                "Domain": w["domain_label"],
-                "Volume": w["monthly_volume"],
-                "Opportunity": w["opportunity_score"],
-            })
-        qw_df = pd.DataFrame(qw_data)
-        st.dataframe(qw_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No quick wins identified yet. Sync more data.")
-
-
-# ── On-Page Errors Tab ───────────────────────────────────────────────────────
-def show_onpage_errors():
-    """On-page errors tab with severity breakdown and fix status."""
-    st.header("🔧 On-Page Errors")
-    st.caption("Crawl-detected page errors with severity and fix tracking")
-
-    # Error summary
-    all_errors = db.list_onpage_errors(
-        domain_id=selected_domain_id,
-        status="open",
-        limit=500,
-    )
-
-    fixed_errors = db.list_onpage_errors(
-        domain_id=selected_domain_id,
-        status="fixed",
-        limit=100,
-    )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Open Errors", len(all_errors))
-    with col2:
-        st.metric("Fixed", len(fixed_errors))
-    with col3:
-        total = len(all_errors) + len(fixed_errors)
-        fix_rate = f"{len(fixed_errors) / max(total, 1) * 100:.0f}%" if total > 0 else "0%"
-        st.metric("Fix Rate", fix_rate)
-
-    # Severity breakdown
-    import pandas as pd
-    if all_errors:
-        severity_counts: dict[str, int] = {}
-        for e in all_errors:
-            severity_counts[e.severity] = severity_counts.get(e.severity, 0) + 1
-
-        sev_df = pd.DataFrame([
-            {"Severity": k.capitalize(), "Count": v}
-            for k, v in sorted(severity_counts.items(),
-                                key=lambda x: {"critical": 0, "warning": 1, "info": 2}.get(x[0], 3))
-        ])
-        col_a, col_b = st.columns([1, 2])
-        with col_a:
-            sev_fig = px.pie(sev_df, values="Count", names="Severity",
-                            title="Error Severity Breakdown",
-                            color="Severity",
-                            color_discrete_map={
-                                "Critical": "#FF4B4B",
-                                "Warning": "#FFA500",
-                                "Info": "#3498DB",
-                            })
-            sev_fig.update_layout(height=350)
-            st.plotly_chart(sev_fig, use_container_width=True)
-
         with col_b:
-            # Error type breakdown
-            type_counts: dict[str, int] = {}
-            for e in all_errors:
-                type_counts[e.error_type] = type_counts.get(e.error_type, 0) + 1
-            type_df = pd.DataFrame([
-                {"Error Type": t.replace("_", " ").title(), "Count": c}
-                for t, c in sorted(type_counts.items(), key=lambda x: -x[1])
-            ])
-            st.dataframe(type_df, use_container_width=True, hide_index=True)
+            # Opportunity score distribution
+            fig = px.histogram(kw_df, x="opportunity_score", nbins=10,
+                               title="Opportunity Score Distribution",
+                               color_discrete_sequence=["#00d4aa"],
+                               labels={"opportunity_score": "Score"})
+            fig.update_layout(height=300, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font_color="#ccc", margin=dict(l=0, r=0, t=30, b=0))
+            st.plotly_chart(fig, use_container_width=True)
 
-    # Open errors table
-    st.subheader("Open Errors")
-    if all_errors:
-        oe_data = []
-        for e in all_errors:
-            domain_label = ""
-            for d in domains:
-                if d.id == e.domain_id:
-                    domain_label = d.label
-                    break
-            oe_data.append({
-                "URL": e.url,
-                "Domain": domain_label,
-                "Type": e.error_type.replace("_", " ").title(),
-                "Severity": e.severity.capitalize(),
-                "Detail": e.detail or "",
-                "Suggested Fix": e.suggested_fix or "",
-                "Discovered": e.discovered_at[:10] if e.discovered_at else "",
+        # Quick wins
+        qw = kw_df[(kw_df["opportunity_score"] >= 7.0) & (kw_df["difficulty"] <= 40) & (kw_df["current_position"] > 5)].copy()
+        if not qw.empty:
+            st.subheader("⚡ Quick Wins (High Opportunity, Low Difficulty)")
+            qw = qw.sort_values("opportunity_score", ascending=False).head(6)
+            qw_cols = st.columns(min(3, len(qw)))
+            for i, (_, row) in enumerate(qw.iterrows()):
+                with qw_cols[i % 3]:
+                    st.markdown(f"""
+                    <div class="quick-win">
+                        <strong style="color:#00d4aa">{row['keyword']}</strong><br>
+                        <span style="color:#aaa;font-size:12px">{row['domain']}</span><br>
+                        <span style="color:#888;font-size:11px">
+                            Score: {row['opportunity_score']:.0f} | Vol: {row['volume']:,} | Pos: {row['current_position']:.0f}
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # Full keyword table
+        with st.expander("📋 All Keywords", expanded=False):
+            display_cols = ["domain", "keyword", "category", "intent", "volume",
+                           "opportunity_score", "difficulty", "current_position", "clicks", "impressions"]
+            show_df = kw_df[display_cols].copy()
+            show_df["opportunity_score"] = show_df["opportunity_score"].round(1)
+            show_df["current_position"] = show_df["current_position"].round(1)
+            show_df = show_df.rename(columns={
+                "opportunity_score": "Score", "current_position": "Pos",
+                "clicks": "Clicks", "impressions": "Imp", "volume": "Vol"
             })
+            st.dataframe(show_df, use_container_width=True, hide_index=True)
 
-        oe_df = pd.DataFrame(oe_data)
+        # Trend chart (keyword selector)
+        st.subheader("📈 Position Trend")
+        kw_names = kw_df["keyword"].tolist()
+        sel_kw = st.selectbox("Select a keyword to view trend", kw_names, key="kw_trend")
+        if sel_kw:
+            trend = query_db("""
+                SELECT rh.date, rh.position, rh.clicks, rh.impressions
+                FROM rank_history rh
+                JOIN keywords k ON rh.keyword_id = k.id
+                WHERE k.keyword = ?
+                ORDER BY rh.date
+            """, [sel_kw])
 
-        # Color severity
-        def sev_color(s):
-            colors = {"Critical": "🟥", "Warning": "🟧", "Info": "🟦"}
-            return f"{colors.get(s, '⬜')} {s}"
-
-        oe_df["Severity"] = oe_df["Severity"].apply(sev_color)
-
-        st.dataframe(
-            oe_df,
-            use_container_width=True,
-            column_config={
-                "URL": st.column_config.TextColumn(width="medium"),
-                "Detail": st.column_config.TextColumn(width="medium"),
-                "Suggested Fix": st.column_config.TextColumn(width="medium"),
-            },
-            hide_index=True,
-        )
+            if not trend.empty:
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.line(trend, x="date", y="position", title=f"{sel_kw} — Position Trend",
+                                  markers=True, color_discrete_sequence=["#ff6b6b"])
+                    fig.update_traces(line=dict(width=2))
+                    fig.update_layout(yaxis=dict(autorange="reversed"), height=300,
+                                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                      font_color="#ccc")
+                    st.plotly_chart(fig, use_container_width=True)
+                with col2:
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=trend["date"], y=trend["clicks"], mode="lines+markers",
+                                             name="Clicks", line=dict(color="#4ecdc4")))
+                    fig.add_trace(go.Scatter(x=trend["date"], y=trend["impressions"], mode="lines+markers",
+                                             name="Impressions", line=dict(color="#ffe66d")))
+                    fig.update_layout(title="Clicks & Impressions", height=300,
+                                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                      font_color="#ccc", legend=dict(orientation="h", y=1.12))
+                    st.plotly_chart(fig, use_container_width=True)
     else:
-        st.success("No open on-page errors! 🎉")
+        st.info("No keyword data found. Run `scripts/init_db.py` to seed data.")
 
-    # Error type legend
-    with st.expander("📖 Error Type Legend"):
-        for etype, desc in sorted(ERROR_TYPES.items()):
-            st.write(f"**{etype.replace('_', ' ').title()}**: {desc}")
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 2: SEO ISSUES
+# ═════════════════════════════════════════════════════════════════════════════
+with tab2:
+    st.header("Technical SEO Issues")
 
+    where2 = []
+    params2 = []
+    if selected_domain != "All":
+        where2.append("d.name = ?")
+        params2.append(selected_domain)
+    sev_filter = st.selectbox("Severity", ["All", "critical", "high", "moderate", "low"], key="sev_filter")
+    if sev_filter != "All":
+        where2.append("e.severity = ?")
+        params2.append(sev_filter)
+    where2_clause = f"WHERE {' AND '.join(where2)}" if where2 else ""
 
-# ── Content Ideas Tab ────────────────────────────────────────────────────────
-def show_content_ideas():
-    """Content ideas tab with backlog, search, and keyword ranking context."""
-    st.header("💡 Content Ideas")
-    st.caption("Blog post backlog with priority scoring and keyword opportunity")
+    issues_df = query_db(f"""
+        SELECT e.id, d.name AS domain, e.error_type, e.severity, e.page_url,
+               e.description, e.suggestion, e.status, e.created_at, e.fixed_at
+        FROM onpage_errors e
+        JOIN domains d ON e.domain_id = d.id
+        {where2_clause.replace('d.', where2_clause.count('d.') > 0 and 'd.' or '')}
+        ORDER BY
+            CASE e.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END,
+            e.id
+    """, params2)
 
-    # Filters
-    col_f1, col_f2, col_f3 = st.columns(3)
-    with col_f1:
-        status_filter = st.selectbox(
-            "Status",
-            ["All", "draft", "backlog", "published", "archived"],
-        )
-    with col_f2:
-        min_priority = st.slider("Min Priority", 1, 10, 1)
-    with col_f3:
-        search_text = st.text_input("Search ideas", placeholder="title or keyword...")
+    if not issues_df.empty:
+        open_issues = issues_df[issues_df["status"] == "open"]
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.markdown(f'<div class="metric-card"><h3>{len(open_issues)}</h3><p>Open Issues</p></div>', unsafe_allow_html=True)
+        with col2:
+            cnt = len(open_issues[open_issues["severity"] == "critical"])
+            st.markdown(f'<div class="metric-card"><h3>{cnt}</h3><p>Critical</p></div>', unsafe_allow_html=True)
+        with col3:
+            cnt = len(open_issues[open_issues["severity"] == "high"])
+            st.markdown(f'<div class="metric-card"><h3>{cnt}</h3><p>High</p></div>', unsafe_allow_html=True)
+        with col4:
+            cnt = len(open_issues[open_issues["severity"] == "moderate"])
+            st.markdown(f'<div class="metric-card"><h3>{cnt}</h3><p>Moderate</p></div>', unsafe_allow_html=True)
+        with col5:
+            fixed = len(issues_df[issues_df["status"] == "fixed"])
+            st.markdown(f'<div class="metric-card"><h3>{fixed}</h3><p>Fixed</p></div>', unsafe_allow_html=True)
 
-    # Get ideas
-    if search_text:
-        ideas = db.search_content_ideas(search_text)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            sev_counts = open_issues["severity"].value_counts().reset_index()
+            sev_counts.columns = ["severity", "count"]
+            color_map = {"critical": "#ff4444", "high": "#ff8800", "moderate": "#ffcc00", "low": "#88ccff"}
+            fig = px.pie(sev_counts, values="count", names="severity", title="Issues by Severity",
+                         color="severity", color_discrete_map=color_map)
+            fig.update_layout(height=300, paper_bgcolor="rgba(0,0,0,0)", font_color="#ccc")
+            st.plotly_chart(fig, use_container_width=True)
+        with col_b:
+            dom_counts = open_issues["domain"].value_counts().reset_index()
+            dom_counts.columns = ["domain", "count"]
+            fig = px.bar(dom_counts, x="domain", y="count", title="Issues by Domain",
+                         color_discrete_sequence=["#4ecdc4"])
+            fig.update_layout(height=300, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font_color="#ccc")
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Issues table
+        with st.expander("📋 All Issues", expanded=True):
+            for _, row in issues_df.iterrows():
+                sev_badge = f'<span class="severity-{row["severity"]}">{row["severity"]}</span>'
+                status_icon = "✅" if row["status"] == "fixed" else "🔴" if row["status"] == "open" else "🟡"
+                st.markdown(f"""
+                **{status_icon} {row["error_type"].replace("_", " ").title()}** {sev_badge}<br>
+                <span style="color:#888;font-size:12px">{row["domain"]} | {row["page_url"]}</span><br>
+                {row["description"]}<br>
+                <span style="color:#4ecdc4;font-size:12px">💡 {row["suggestion"]}</span>
+                """, unsafe_allow_html=True)
+                st.divider()
     else:
-        ideas = db.list_content_ideas(
-            status=status_filter if status_filter != "All" else None,
-            min_priority=min_priority,
-        )
+        st.info("No SEO issues found. Run `scripts/init_db.py` to seed data.")
 
-    import pandas as pd
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 3: CONTENT BACKLOG
+# ═════════════════════════════════════════════════════════════════════════════
+with tab3:
+    st.header("Content Idea Backlog")
 
-    if ideas:
-        idea_data = []
-        for idea in ideas:
-            idea_data.append({
-                "Title": idea.title,
-                "Target Keyword": idea.target_keyword,
-                "Priority": f"{'⭐' * idea.priority} ({idea.priority}/10)",
-                "Status": idea.status.capitalize(),
-                "Effort": idea.effort.capitalize(),
-                "Source": idea.source.replace("_", " ").title(),
-                "Date Added": idea.date_added,
+    where3 = []
+    params3 = []
+    if selected_category != "All":
+        where3.append("ci.category = ?")
+        params3.append(selected_category)
+    effort_filter = st.selectbox("Effort", ["All", "easy", "medium", "hard"], key="effort_filter")
+    if effort_filter != "All":
+        where3.append("ci.effort = ?")
+        params3.append(effort_filter)
+    where3_clause = f"WHERE {' AND '.join(where3)}" if where3 else ""
+
+    ideas_df = query_db(f"""
+        SELECT ci.id, ci.title, ci.target_keyword, ci.category, ci.estimated_searches,
+               ci.opportunity_score, ci.effort, ci.content_type, ci.status,
+               vw.current_position, vw.domain
+        FROM content_ideas ci
+        LEFT JOIN v_backlog_with_rankings vw ON ci.id = vw.idea_id
+        {where3_clause}
+        ORDER BY ci.opportunity_score DESC
+    """, params3)
+
+    if not ideas_df.empty:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(f'<div class="metric-card"><h3>{len(ideas_df)}</h3><p>Ideas</p></div>', unsafe_allow_html=True)
+        with col2:
+            avg_score = ideas_df["opportunity_score"].mean()
+            st.markdown(f'<div class="metric-card"><h3>{avg_score:.1f}</h3><p>Avg Score</p></div>', unsafe_allow_html=True)
+        with col3:
+            total_vol = int(ideas_df["estimated_searches"].sum())
+            st.markdown(f'<div class="metric-card"><h3>{total_vol:,}</h3><p>Total Monthly Searches</p></div>', unsafe_allow_html=True)
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            fig = px.scatter(ideas_df, x="estimated_searches", y="opportunity_score",
+                             size="estimated_searches", color="category", hover_name="title",
+                             title="Opportunity Matrix: Score vs Search Volume",
+                             labels={"estimated_searches": "Monthly Searches", "opportunity_score": "Score"})
+            fig.update_layout(height=400, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font_color="#ccc")
+            st.plotly_chart(fig, use_container_width=True)
+        with col_b:
+            cat_counts = ideas_df.groupby("category")["estimated_searches"].sum().reset_index()
+            fig = px.bar(cat_counts.sort_values("estimated_searches"), x="estimated_searches", y="category",
+                         orientation="h", title="Total Search Volume by Category",
+                         color_discrete_sequence=["#ff6b6b"],
+                         labels={"estimated_searches": "Monthly Searches", "category": ""})
+            fig.update_layout(height=400, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font_color="#ccc", margin=dict(l=0, r=0, t=30, b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Top picks
+        top = ideas_df[ideas_df["opportunity_score"] >= 8.0].head(6)
+        if not top.empty:
+            st.subheader("⭐ Top Picks (Score ≥ 8.0)")
+            for _, row in top.iterrows():
+                st.markdown(f"""
+                **{row['title']}** — Score: {row['opportunity_score']:.0f} | Searches: {row['estimated_searches']:,}
+                <br><span style="color:#888;font-size:12px">Keyword: {row['target_keyword']} | Effort: {row['effort']} | Type: {row['content_type']}</span>
+                """, unsafe_allow_html=True)
+                st.divider()
+
+        with st.expander("📋 All Ideas", expanded=False):
+            display = ideas_df[["title", "target_keyword", "category", "estimated_searches",
+                               "opportunity_score", "effort", "content_type"]].copy()
+            display = display.rename(columns={
+                "target_keyword": "Keyword", "estimated_searches": "Searches",
+                "opportunity_score": "Score", "content_type": "Type"
             })
-
-        idea_df = pd.DataFrame(idea_data)
-        st.dataframe(idea_df, use_container_width=True, hide_index=True)
-
-        # Count by priority
-        st.subheader("Backlog Distribution")
-        priority_counts = {f"P{p}": 0 for p in range(1, 11)}
-        for idea in ideas:
-            priority_counts[f"P{idea.priority}"] = (
-                priority_counts.get(f"P{idea.priority}", 0) + 1
-            )
-        p_df = pd.DataFrame([
-            {"Priority": k, "Count": v}
-            for k, v in sorted(priority_counts.items()) if v > 0
-        ])
-        if not p_df.empty:
-            p_fig = px.bar(p_df, x="Priority", y="Count", title="Ideas by Priority")
-            p_fig.update_layout(height=350)
-            st.plotly_chart(p_fig, use_container_width=True)
+            st.dataframe(display, use_container_width=True, hide_index=True)
     else:
-        st.info("No content ideas found matching your filters.")
+        st.info("No content ideas found.")
 
-    # Backlog with rankings
-    st.subheader("📋 Backlog with Keyword Rankings")
-    backlog = db.get_backlog_with_rankings()
-    if backlog:
-        bl_data = []
-        for b in backlog:
-            bl_data.append({
-                "Title": b["title"],
-                "Keyword": b["target_keyword"],
-                "Priority": b["priority"],
-                "Volume": b["monthly_volume"],
-                "Curr. Position": f"#{int(b['current_position'])}" if b["current_position"] else "No data",
-                "Difficulty": f"{b['keyword_difficulty']:.0f}%" if b["keyword_difficulty"] else "N/A",
-                "Opportunity": f"{b['opportunity_score']:.1f}" if b["opportunity_score"] else "N/A",
-            })
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 4: SYNC & SETTINGS
+# ═════════════════════════════════════════════════════════════════════════════
+with tab4:
+    st.header("Sync & Settings")
 
-        bl_df = pd.DataFrame(bl_data)
-        st.dataframe(bl_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No backlog ideas with keyword matches.")
+    col1, col2 = st.columns(2)
 
+    with col1:
+        st.subheader("📡 Google Search Console Sync")
+        last_sync = query_db("""
+            SELECT source, status, rows_synced, started_at, completed_at, error
+            FROM sync_log
+            WHERE source = 'gsc'
+            ORDER BY started_at DESC
+            LIMIT 1
+        """)
+        if not last_sync.empty:
+            row = last_sync.iloc[0]
+            icon = "✅" if row["status"] == "success" else "❌" if row["status"] == "failed" else "🔄"
+            st.markdown(f"""
+            {icon} **Last Sync:** {row['completed_at'] or 'In progress...'}<br>
+            **Status:** {row['status']}<br>
+            **Rows:** {int(row['rows_synced']) if pd.notna(row['rows_synced']) else 'N/A'}
+            """)
+            if pd.notna(row["error"]):
+                st.error(row["error"])
+        else:
+            st.info("No syncs yet. Click the button below to run the first sync.")
 
-# ── Data Sync Tab ────────────────────────────────────────────────────────────
-def show_data_sync():
-    """Data sync tab with manual sync triggers and sync history."""
-    st.header("🔄 Data Sync")
-    st.caption("Manual sync controls and ingestion history")
-
-    # Sync history
-    st.subheader("Sync History")
-    recent_syncs = db.get_recent_syncs(limit=20)
-    if recent_syncs:
-        import pandas as pd
-        sync_data = []
-        for s in recent_syncs:
-            status_icon = "✅" if s["status"] == "completed" else "❌" if s["status"] == "failed" else "🔄"
-            sync_data.append({
-                "Status": f"{status_icon} {s['status'].capitalize()}",
-                "Type": s["sync_type"].replace("_", " ").title(),
-                "Rows": s["rows_processed"],
-                "Started": s["started_at"][:19] if s["started_at"] else "",
-                "Completed": s["completed_at"][:19] if s["completed_at"] else "",
-                "Error": (s["error_detail"] or "")[:100],
-            })
-        sync_df = pd.DataFrame(sync_data)
-        st.dataframe(sync_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No sync history yet.")
-
-    # Manual sync buttons
-    st.subheader("Manual Sync")
-    col_s1, col_s2, col_s3 = st.columns(3)
-
-    with col_s1:
-        if st.button("🔍 Sync GSC Data", type="primary", use_container_width=True):
-            with st.spinner("Syncing Google Search Console data..."):
-                try:
-                    from src.gsc_client import GSCClient
-                    gsc = GSCClient()
-                    sync_id = db.start_sync("gsc")
-
-                    total_records = 0
-                    for d in domains:
-                        site_url = f"sc-domain:{d.url}"
-                        results = gsc.fetch_rankings(site_url, days=7, live=False)
-                        kw_results = gsc.records_for_db(results, d.id)
-                        for kw_text, records in kw_results.items():
-                            db.upsert_ranks_batch(records)
-                            total_records += len(records)
-
-                    db.complete_sync(sync_id, rows_processed=total_records)
-                    st.success(f"Synced {total_records} rank records across {len(domains)} domains")
-                    st.cache_data.clear()
-                except Exception as e:
-                    st.error(f"Sync failed: {e}")
-
-    with col_s2:
-        if st.button("📄 Import Content Ideas", use_container_width=True):
-            backlog_path = os.path.join(BASE_DIR, "data", "sample_backlog.csv")
-            if os.path.exists(backlog_path):
-                with st.spinner("Importing content ideas..."):
-                    try:
-                        from src.backlog_importer import BacklogImporter
-                        importer = BacklogImporter(DB_PATH, SCHEMA_PATH)
-                        result = importer.import_csv(backlog_path)
-                        st.success(f"Imported {result['imported']} ideas, "
-                                  f"{result.get('updated', 0)} updated, "
-                                  f"{result.get('skipped', 0)} skipped")
-                        st.cache_data.clear()
-                    except ImportError:
-                        st.warning("Backlog importer not available yet.")
-                    except Exception as e:
-                        st.error(f"Import failed: {e}")
+        if st.button("🔄 Run GSC Sync Now", type="primary"):
+            with st.spinner("Syncing GSC data... (up to 120s)"):
+                result = run_sync()
+            if result["status"] == "success":
+                st.success("Sync complete!")
+                st.code(result["stdout"] if result.get("stdout") else "OK")
+                st.cache_data.clear()
             else:
-                st.warning("No backlog CSV found at data/sample_backlog.csv")
+                st.error(f"Sync failed: {result.get('message', result.get('stderr', 'Unknown error'))}")
 
-    with col_s3:
-        if st.button("🔧 Ingest On-Page Errors", use_container_width=True):
-            json_path = os.path.join(BASE_DIR, "data", "sample_onpage_errors.json")
-            if os.path.exists(json_path):
-                with st.spinner("Ingesting on-page errors..."):
-                    try:
-                        from src.onpage_ingestion import OnPageIngestion
-                        ing = OnPageIngestion(DB_PATH, SCHEMA_PATH)
-                        for d in domains:
-                            result = ing.ingest_json(
-                                json_path,
-                                domain_id=d.id,
-                                batch_id=f"manual-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                                close_previous=False,
-                            )
-                            st.success(f"Domain {d.label}: {result['imported']} errors ingested")
-                        st.cache_data.clear()
-                    except ImportError:
-                        st.warning("On-page error ingestion module not available yet.")
-                    except Exception as e:
-                        st.error(f"Ingestion failed: {e}")
-            else:
-                st.warning("No error sample file found.")
+        # Sync history
+        sync_hist = query_db("""
+            SELECT source, status, rows_synced, started_at, completed_at
+            FROM sync_log ORDER BY started_at DESC LIMIT 10
+        """)
+        if not sync_hist.empty:
+            with st.expander("Sync History", expanded=False):
+                st.dataframe(sync_hist, use_container_width=True, hide_index=True)
 
-    # Database info
-    st.subheader("Database Information")
-    db_path_display = DB_PATH
-    if os.path.exists(DB_PATH):
-        size_mb = os.path.getsize(DB_PATH) / (1024 * 1024)
-        st.caption(f"Database: `{db_path_display}` ({size_mb:.2f} MB)")
-    else:
-        st.caption(f"Database: `{db_path_display}` (not yet created)")
+    with col2:
+        st.subheader("📁 File Status")
+        files = {
+            "keyword_research.json": os.path.join(PROJECT_DIR, "keyword_research.json"),
+            "blog_content_ideas.json": os.path.join(PROJECT_DIR, "blog_content_ideas.json"),
+            "giantbubbles-technical-seo-audit.json": os.path.join(PROJECT_DIR, "giantbubbles-technical-seo-audit.json"),
+            "Database (seo_dashboard.db)": os.path.join(PROJECT_DIR, "data", "seo_dashboard.db"),
+        }
+        for label, fpath in files.items():
+            exists = os.path.exists(fpath)
+            icon = "✅" if exists else "❌"
+            size = os.path.getsize(fpath) if exists else 0
+            st.markdown(f"{icon} **{label}** — {size:,} bytes" if exists else f"{icon} **{label}** — Not found")
 
+    st.divider()
 
-# ── Main App ─────────────────────────────────────────────────────────────────
-def main():
-    st.title("📊 Tinka SEO Dashboard")
-    st.caption(f"Giant Bubbles | Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    # Vercel Deployment
+    st.subheader("🚀 Vercel Deployment")
+    st.markdown("""
+    To deploy this dashboard on Vercel:
 
-    # Tabs
-    tab_overview, tab_rankings, tab_errors, tab_content, tab_sync = st.tabs([
-        "📋 Overview",
-        "📈 Rankings",
-        "🔧 On-Page Errors",
-        "💡 Content Ideas",
-        "🔄 Data Sync",
-    ])
+    1. **Install Vercel CLI:** `npm i -g vercel`
+    2. **Create requirements.txt** with: `streamlit`, `pandas`, `plotly`, `google-api-python-client`, `pyyaml`
+    3. **Create vercel.json:**
+    ```json
+    {
+        "builds": [{"src": "seo_dashboard.py", "use": "@vercel/python"}],
+        "routes": [{"src": "/(.*)", "dest": "seo_dashboard.py"}]
+    }
+    ```
+    4. **Run:** `vercel --prod`
+    5. Set the `CRON_SCHEDULE=0 6 * * *` environment variable for daily sync
 
-    with tab_overview:
-        show_summary_metrics()
+    **Alternative:** Deploy on [Streamlit Community Cloud](https://streamlit.io/cloud) for free.
+    """)
 
-        # Quick overview of all sections
-        st.subheader("Quick Overview")
+    # Cron setup
+    st.subheader("⏰ Daily Sync (Cron)")
+    st.markdown("""
+    Set up daily automatic GSC data sync:
 
-        # Mini current rankings
-        rankings = db.current_rankings(domain_id=selected_domain_id, keyword_filter=keyword_search if keyword_search else None, limit=5)
-        if rankings:
-            with st.expander("Top 5 Rankings by Opportunity", expanded=True):
-                import pandas as pd
-                mini = []
-                for r in rankings[:5]:
-                    mini.append({
-                        "Keyword": r["keyword"],
-                        "Domain": r["domain_label"],
-                        "Position": f"#{int(r['current_position'])}" if r["current_position"] else "N/A",
-                        "Volume": r["monthly_volume"],
-                        "Score": r["opportunity_score"],
-                    })
-                st.dataframe(pd.DataFrame(mini), use_container_width=True, hide_index=True)
+    - **Hermes cron:** `hermes cron create "Sync GSC data" --schedule "0 6 * * *" --command "cd /c/Users/heysh/AppData/Local/hermes/kanban/boards/dhiya/workspaces/t_0b644a51 && python scripts/sync_gsc.py --live --days 1"`
+    - **Windows Task Scheduler:** Create a basic task that runs daily at 6 AM: `python C:\\Users\\heysh\\AppData\\Local\\hermes\\kanban\\boards\\dhiya\\workspaces\\t_0b644a51\\scripts\\sync_gsc.py --live --days 1`
+    """)
 
-        # Mini content ideas
-        ideas = db.top_content_ideas(limit=5)
-        if ideas:
-            with st.expander("Top 5 Content Ideas by Opportunity", expanded=True):
-                import pandas as pd
-                mini_i = []
-                for i in ideas:
-                    mini_i.append({
-                        "Title": i["title"][:60] + ("..." if len(i["title"]) > 60 else ""),
-                        "Keyword": i["target_keyword"],
-                        "Volume": i["monthly_volume"],
-                        "Score": i["opportunity_score"],
-                    })
-                st.dataframe(pd.DataFrame(mini_i), use_container_width=True, hide_index=True)
-
-        # Recent syncs
-        recent = db.get_recent_syncs(limit=3)
-        if recent:
-            with st.expander("Recent Sync Activity"):
-                import pandas as pd
-                sync_data = []
-                for s in recent:
-                    sync_data.append({
-                        "Type": s["sync_type"],
-                        "Status": s["status"],
-                        "Rows": s["rows_processed"],
-                        "When": s["started_at"][:19],
-                    })
-                st.dataframe(pd.DataFrame(sync_data), use_container_width=True, hide_index=True)
-
-    with tab_rankings:
-        show_keyword_rankings()
-
-    with tab_errors:
-        show_onpage_errors()
-
-    with tab_content:
-        show_content_ideas()
-
-    with tab_sync:
-        show_data_sync()
-
-    # Footer
-    st.markdown("---")
-    st.caption("Tinka SEO Dashboard | Built with Streamlit | Data source: Google Search Console + Manual Research")
-
-
-if __name__ == "__main__":
-    main()
+    st.caption(f"Dashboard path: {PROJECT_DIR}")

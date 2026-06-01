@@ -19,8 +19,7 @@ build/
 .DS_Store
 Thumbs.db
 
-# Database - keep the schema but not the data
-data/*.db
+# Database - WAL/shm artifacts only (the DB itself is tracked for cloud deployment)
 data/*.db-wal
 data/*.db-shm
 
