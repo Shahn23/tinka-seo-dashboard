@@ -255,6 +255,78 @@ with tab1:
     else:
         st.info("No keyword data found. Run `scripts/init_db.py` to seed data.")
 
+    # ── New Keyword Opportunities (unranked) ─────────────────────────────────
+    st.divider()
+    st.subheader("🆕 New Keyword Opportunities (from Research)")
+    st.caption("Keywords identified in the latest keyword research. No ranking data yet — these need content to target.")
+
+    new_kw_df = query_db(f"""
+        SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent, k.volume,
+               k.opportunity_score, k.difficulty
+        FROM keywords k
+        JOIN domains d ON k.domain_id = d.id
+        LEFT JOIN rank_history rh ON k.id = rh.keyword_id
+        {where_clause.replace('k.category', 'k.category') if where_parts else ''}
+        WHERE rh.id IS NULL
+        ORDER BY k.opportunity_score DESC, k.volume DESC
+    """)
+
+    # Apply same filters manually since WHERE clause gets complex with LEFT JOIN
+    if selected_domain != "All" or selected_category != "All" or selected_intent != "All":
+        new_kw_df2 = query_db(f"""
+            SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent, k.volume,
+                   k.opportunity_score, k.difficulty
+            FROM keywords k
+            JOIN domains d ON k.domain_id = d.id
+            LEFT JOIN rank_history rh ON k.id = rh.keyword_id
+            WHERE rh.id IS NULL
+            AND (d.name = ? OR ? = 'All')
+            AND (k.category = ? OR ? = 'All')
+            AND (k.intent = ? OR ? = 'All')
+            ORDER BY k.opportunity_score DESC, k.volume DESC
+        """, [selected_domain, selected_domain, selected_category, selected_category, selected_intent, selected_intent])
+    else:
+        new_kw_df2 = new_kw_df
+
+    if not new_kw_df2.empty:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(f'<div class="metric-card"><h3>{len(new_kw_df2)}</h3><p>Untracked Keywords</p></div>', unsafe_allow_html=True)
+        with col2:
+            avg_opp = new_kw_df2["opportunity_score"].mean()
+            st.markdown(f'<div class="metric-card"><h3>{avg_opp:.1f}</h3><p>Avg Opportunity</p></div>', unsafe_allow_html=True)
+        with col3:
+            total_vol = int(new_kw_df2["volume"].sum())
+            st.markdown(f'<div class="metric-card"><h3>{total_vol:,}</h3><p>Total Monthly Searches</p></div>', unsafe_allow_html=True)
+
+        # Top opportunities cards
+        top_new = new_kw_df2[new_kw_df2["opportunity_score"] >= 8.0].head(9)
+        if not top_new.empty:
+            st.markdown("**⭐ Top Opportunities (Score ≥ 8.0)**")
+            cols = st.columns(3)
+            for i, (_, row) in enumerate(top_new.iterrows()):
+                with cols[i % 3]:
+                    st.markdown(f"""
+                    <div class="quick-win">
+                        <strong style="color:#00d4aa">{row['keyword']}</strong><br>
+                        <span style="color:#aaa;font-size:12px">{row['domain']} · {row['category']}</span><br>
+                        <span style="color:#888;font-size:11px">
+                            Opp: {row['opportunity_score']:.0f} | Vol: {row['volume']:,} | Diff: {row['difficulty']}
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # Full table of new keyword opportunities
+        with st.expander("📋 All New Keyword Opportunities", expanded=False):
+            show_new = new_kw_df2[["domain", "keyword", "category", "intent", "volume", "opportunity_score", "difficulty"]].copy()
+            show_new = show_new.rename(columns={
+                "opportunity_score": "Score", "volume": "Vol"
+            })
+            show_new["Score"] = show_new["Score"].round(1)
+            st.dataframe(show_new, use_container_width=True, hide_index=True)
+    else:
+        st.info("All keywords have ranking data — no untracked keywords.")
+
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 2: SEO ISSUES
 # ═════════════════════════════════════════════════════════════════════════════
@@ -349,11 +421,16 @@ with tab3:
     if effort_filter != "All":
         where3.append("ci.effort = ?")
         params3.append(effort_filter)
+    source_filter = st.selectbox("Source", ["All", "keyword-research (Blog Ideas)", "seed (original)", "manual"], key="source_filter")
+    src_map = {"keyword-research (Blog Ideas)": "keyword-research", "seed (original)": "seed", "manual": "manual"}
+    if source_filter != "All":
+        where3.append("ci.source = ?")
+        params3.append(src_map[source_filter])
     where3_clause = f"WHERE {' AND '.join(where3)}" if where3 else ""
 
     ideas_df = query_db(f"""
         SELECT ci.id, ci.title, ci.target_keyword, ci.category, ci.estimated_searches,
-               ci.opportunity_score, ci.effort, ci.content_type, ci.status,
+               ci.opportunity_score, ci.effort, ci.content_type, ci.status, ci.source,
                vw.current_position, vw.domain
         FROM content_ideas ci
         LEFT JOIN v_backlog_with_rankings vw ON ci.id = vw.idea_id
@@ -392,22 +469,29 @@ with tab3:
             st.plotly_chart(fig, use_container_width=True)
 
         # Top picks
-        top = ideas_df[ideas_df["opportunity_score"] >= 8.0].head(6)
+        top = ideas_df[ideas_df["opportunity_score"] >= 8.0].head(8)
         if not top.empty:
             st.subheader("⭐ Top Picks (Score ≥ 8.0)")
             for _, row in top.iterrows():
+                src_badge = "🔍 Research" if row.get("source") == "keyword-research" else "📦 Seed" if row.get("source") == "seed" else "📝 Manual"
                 st.markdown(f"""
-                **{row['title']}** — Score: {row['opportunity_score']:.0f} | Searches: {row['estimated_searches']:,}
+                **{row['title']}** — Score: {row['opportunity_score']:.0f} | Searches: {row['estimated_searches']:,} | {src_badge}
                 <br><span style="color:#888;font-size:12px">Keyword: {row['target_keyword']} | Effort: {row['effort']} | Type: {row['content_type']}</span>
                 """, unsafe_allow_html=True)
                 st.divider()
 
         with st.expander("📋 All Ideas", expanded=False):
             display = ideas_df[["title", "target_keyword", "category", "estimated_searches",
-                               "opportunity_score", "effort", "content_type"]].copy()
+                               "opportunity_score", "effort", "content_type", "source"]].copy()
             display = display.rename(columns={
                 "target_keyword": "Keyword", "estimated_searches": "Searches",
                 "opportunity_score": "Score", "content_type": "Type"
+            })
+            # Highlight source
+            display["Source"] = display["source"].replace({
+                "keyword-research": "🔍 Research",
+                "seed": "📦 Seed",
+                "manual": "📝 Manual",
             })
             st.dataframe(display, use_container_width=True, hide_index=True)
     else:
@@ -463,11 +547,12 @@ with tab4:
                 st.dataframe(sync_hist, use_container_width=True, hide_index=True)
 
     with col2:
-        st.subheader("📁 File Status")
+        st.subheader("📁 Data Source Status")
         files = {
-            "keyword_research.json": os.path.join(PROJECT_DIR, "keyword_research.json"),
-            "blog_content_ideas.json": os.path.join(PROJECT_DIR, "blog_content_ideas.json"),
-            "giantbubbles-technical-seo-audit.json": os.path.join(PROJECT_DIR, "giantbubbles-technical-seo-audit.json"),
+            "tinka_keyword_research.csv": os.path.join(PROJECT_DIR, "data", "tinka_keyword_research.csv"),
+            "tinka_blog_post_ideas.md": os.path.join(PROJECT_DIR, "data", "tinka_blog_post_ideas.md"),
+            "errors_au.json": os.path.join(PROJECT_DIR, "data", "errors_au.json"),
+            "errors_nz.json": os.path.join(PROJECT_DIR, "data", "errors_nz.json"),
             "Database (seo_dashboard.db)": os.path.join(PROJECT_DIR, "data", "seo_dashboard.db"),
         }
         for label, fpath in files.items():

@@ -1,0 +1,76 @@
+Market,Keyword,Category,Intent,Est. Search Volume,Keyword Difficulty,Opportunity Score,Current Position,30-Day Avg Pos,Ranking Potential,Notes
+AU,Giant Bubble Concentrate Australia,product,commercial,210,40,8.0,,,,Core product term — Tinka sells 500ml/240ml concentrates
+AU,Pour n Play Giant Bubble Juice,product,commercial,170,35,8.0,,,,Unique product name — no competition on this exact term
+AU,Bubble Wand Australia,product,commercial,390,55,7.5,,,,High vol but competitive — long-tail variant needed
+AU,People in a Bubble Wand,product,commercial,140,25,8.5,,,,Unique product — strong local ranking potential
+AU,Windy Day Bubble Wand,product,commercial,110,20,8.5,,,,Unique product name — content opportunity
+AU,Giant Bubble Gift Card Australia,product,commercial,60,15,7.5,,,,Seasonal gift opportunity
+AU,Giant Bubbles Sydney,local,commercial,170,25,8.5,,,,Major AU city — local event/performer search
+AU,Giant Bubbles Melbourne,local,commercial,210,30,8.0,,,,Second-largest AU city
+AU,Giant Bubbles Brisbane,local,commercial,130,20,8.5,,,,Growing QLD market
+AU,Giant Bubbles Perth,local,commercial,110,20,8.5,,,,WA market
+AU,Giant Bubbles Gold Coast,local,commercial,100,15,8.5,,,,Tourist/event market
+AU,Bubble Entertainment Melbourne,local,commercial,90,15,8.0,,,,Event performer search
+AU,Party Bubbles Australia,party,commercial,260,40,7.5,,,,Broader party keyword
+AU,Wholesale Bubble Solution Australia,b2b,commercial,90,20,8.5,,,,Wholesale enquiry page
+AU,Bulk Bubble Concentrate Australia,b2b,commercial,70,15,8.5,,,,B2B bulk orders
+AU,Giant Bubbles for Schools Australia,b2b,commercial,60,10,8.0,,,,Educational market — content idea
+AU,How to Make Giant Bubbles With Corn Syrup,content,informational,320,25,8.5,,,,Long-tail recipe variant
+AU,Best Giant Bubble Recipe Australia,content,informational,210,25,8.5,,,,AU-specific recipe search
+AU,Giant Bubble Science Experiment,content,informational,260,20,7.5,,,,Educational content — schools/parents
+AU,Giant Bubbles Party Ideas,content,informational,390,35,7.5,,,,Broader party content
+AU,Giant Bubble Photography Tips,content,informational,110,15,7.5,,,,Visual content — wedding/event photographers
+AU,Bio-Grade Bubble Solution Australia,product,commercial,50,10,8.0,,,,Eco-conscious niche — Tinka is bio-grade
+AU,Non Toxic Giant Bubbles,product,commercial,210,30,8.0,,,,Safety-driven parents
+AU,Giant Bubbles for Toddlers,kids,commercial,170,20,8.0,,,,Age-specific parenting search
+AU,Giant Bubbles Birthday Party Australia,party,commercial,140,25,8.5,,,,Local event planning
+AU,Giant Bubble Entertainer Hire Australia,local,commercial,90,15,8.5,,,,Service booking intent
+NZ,Pour n Play Bubble Juice NZ,product,commercial,100,20,8.5,,,,NZ-specific product name search
+NZ,Tinka Giant Bubbles,brand_general,navigational,210,10,9.0,,,,Brand search — should be #1
+NZ,People in a Bubble Wand NZ,product,commercial,90,20,8.5,,,,Unique product — strong local advantage
+NZ,Windy Day Wand NZ,product,commercial,70,15,8.5,,,,Unique product — no competition
+NZ,Giant Bubble Concentrate New Zealand,product,commercial,140,30,8.0,,,,Core product search
+NZ,Bubble Wand,product,commercial,480,60,6.5,,,,High vol but very competitive — long-tail better
+NZ,Giant Bubbles Christchurch,local,commercial,100,15,8.5,,,,South Island market
+NZ,Giant Bubbles Wellington,local,commercial,110,15,8.5,,,,Capital city market
+NZ,Giant Bubbles Hamilton NZ,local,commercial,60,10,8.0,,,,Waikato region
+NZ,Bubble Entertainer Christchurch,local,commercial,70,10,8.5,,,,Event performer in CHC
+NZ,Kids Birthday Party Auckland,local,commercial,390,45,7.0,,,,Broader party search but high vol
+NZ,Bulk Bubble Solution NZ,b2b,commercial,50,10,8.5,,,,B2B wholesale orders
+NZ,Giant Bubbles for Events NZ,b2b,commercial,70,15,8.0,,,,Corporate events
+NZ,Giant Bubbles for Schools NZ,b2b,commercial,40,5,8.0,,,,School orders / educational
+NZ,How to Make Giant Bubbles NZ,content,informational,170,20,8.5,,,,NZ-specific recipe search
+NZ,Giant Bubble Solution Recipe NZ,content,informational,100,20,8.0,,,,NZ recipe content
+NZ,Giant Bubble Art,content,informational,210,25,7.5,,,,Creative content opportunity
+NZ,DIY Giant Bubble Wands,content,informational,260,25,8.0,,,,DIY content — teaches how to make wands
+NZ,Summer Activities for Kids NZ,kids,informational,320,30,7.5,,,,Seasonal — high volume during Dec-Feb
+NZ,Christmas Gift for Kids NZ,seasonal,commercial,590,55,6.5,,,,High volume but competitive seasonal
+NZ,School Holiday Activities Auckland,local,informational,260,25,7.5,,,,School holiday related
+
+--- EXISTING KEYWORDS (with current positions) ---
+Market,Keyword,Category,Intent,Volume,Difficulty,Opportunity Score,Current Position,30-Day Avg Pos,Clicks (30d),Imp (30d)
+NZ,Wholesale Bubbles NZ,b2b,,70,15,8.0,3.5,5.6,1164,6695
+NZ,Giant Bubbles NZ,brand_general,,260,30,7.5,4.3,6.4,999,6204
+NZ,Giant Bubble Kit NZ,product,,320,40,8.5,5.0,5.0,1007,6627
+NZ,Bubble Entertainer Auckland,local,,140,25,8.5,5.9,4.7,1227,5425
+NZ,Party Bubbles Auckland,party,,170,30,8.0,5.9,5.0,995,6041
+NZ,Giant Bubble Wand NZ,product,,210,35,8.0,6.6,5.4,946,5491
+NZ,Bubble Solution NZ,product,,90,35,7.5,7.2,6.1,1008,5705
+AU,Giant Bubbles For Kids,kids,,390,35,8.0,3.2,5.6,987,6460
+AU,Giant Bubble Wedding,content,,210,40,7.5,3.6,5.5,1283,5997
+AU,Wholesale Giant Bubbles,b2b,,110,20,8.5,4.0,4.9,1151,6901
+AU,Giant Bubble Concentrate,product,,140,45,7.0,4.2,6.5,955,6253
+AU,How To Make Giant Bubbles,content,,720,30,9.0,4.2,4.4,1058,5563
+AU,Party Entertainment Auckland,local,,110,30,8.5,4.5,4.6,1048,5366
+AU,Best Bubble Solution,product,,320,55,8.0,4.7,5.3,1078,6172
+AU,Giant Bubble Kit,product,,590,45,8.5,5.6,4.9,1165,7044
+AU,Bubble Wand For Kids,kids,,260,40,7.5,5.7,6.0,1009,6359
+AU,Warehouse Bubble Wand,product,,170,50,7.5,5.7,6.0,1106,6412
+AU,Giant Bubbles For Dogs,kids,,140,25,6.5,5.9,7.3,858,6128
+AU,Kids Outdoor Activities,kids,,880,30,7.0,6.3,7.2,787,6458
+AU,Outdoor Toys Australia,product,,480,60,7.0,6.5,6.4,966,6324
+AU,Birthday Party Bubbles,party,,390,40,8.5,6.7,4.9,1042,6513
+AU,Bubble Entertainer,b2b,,90,25,8.0,7.0,5.6,954,6612
+AU,Bubble Solution Recipe,content,,590,35,8.0,7.3,5.7,1229,6327
+AU,Giant Bubbles For Events,b2b,,110,35,8.0,8.2,4.9,1224,6682
+AU,Giant Bubble Wand Australia,product,,170,50,7.5,8.4,6.1,1166,5710
