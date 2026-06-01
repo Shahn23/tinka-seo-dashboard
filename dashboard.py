@@ -130,7 +130,9 @@ if auto_refresh:
     st.markdown('<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+last_sync = query_db("SELECT completed_at FROM sync_log WHERE source='gsc' ORDER BY completed_at DESC LIMIT 1")
+sync_label = last_sync.iloc[0]["completed_at"] if not last_sync.empty else "Never"
+st.sidebar.caption(f"Last sync: {str(sync_label)[:19] if sync_label != 'Never' else 'Never'}")
 
 # Build WHERE clause for keyword queries
 where_parts_kw = []
@@ -145,6 +147,25 @@ if selected_intent != "All":
     where_parts_kw.append("k.intent = ?")
     params_kw.append(selected_intent)
 where_clause_kw = f"WHERE {' AND '.join(where_parts_kw)}" if where_parts_kw else ""
+
+# ── Quick Overview (for non-technical stakeholders) ──────────────────────────
+ov_total_kw = query_db("SELECT COUNT(*) as c FROM keywords")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM keywords").empty else 0
+ov_ranked = query_db("SELECT COUNT(DISTINCT k.id) as c FROM keywords k JOIN rank_history rh ON k.id=rh.keyword_id")["c"].iloc[0] if not query_db("SELECT COUNT(DISTINCT k.id) as c FROM keywords k JOIN rank_history rh ON k.id=rh.keyword_id").empty else 0
+ov_open_issues = query_db("SELECT COUNT(*) as c FROM onpage_errors WHERE status='open'")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM onpage_errors WHERE status='open'").empty else 0
+ov_ideas = query_db("SELECT COUNT(*) as c FROM content_ideas")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM content_ideas").empty else 0
+ov_avg_pos = query_db("SELECT AVG(position) as c FROM rank_history WHERE (keyword_id, date) IN (SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id)")["c"].iloc[0] if not query_db("SELECT AVG(position) as c FROM rank_history WHERE (keyword_id, date) IN (SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id)").empty else 0
+
+st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0d1117,#161b22);border:1px solid #30363d;border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="text-align:center;min-width:100px;"><span style="font-size:26px;font-weight:700;color:#00d4aa;">{ov_total_kw}</span><br><span style="font-size:12px;color:#8b949e;">Keywords Tracked</span></div>
+        <div style="text-align:center;min-width:100px;"><span style="font-size:26px;font-weight:700;color:#58a6ff;">{ov_ranked}</span><br><span style="font-size:12px;color:#8b949e;">Keywords Ranked</span></div>
+        <div style="text-align:center;min-width:100px;"><span style="font-size:26px;font-weight:700;color:{'#ff4444' if ov_open_issues > 0 else '#00d4aa'};">{ov_open_issues}</span><br><span style="font-size:12px;color:#8b949e;">Open Issues</span></div>
+        <div style="text-align:center;min-width:100px;"><span style="font-size:26px;font-weight:700;color:#d2a8ff;">{ov_ideas}</span><br><span style="font-size:12px;color:#8b949e;">Content Ideas</span></div>
+        <div style="text-align:center;min-width:100px;"><span style="font-size:26px;font-weight:700;color:{'#00d4aa' if ov_avg_pos and ov_avg_pos <= 10 else '#ff8800' if ov_avg_pos and ov_avg_pos <= 20 else '#ff4444'};">{f'{ov_avg_pos:.1f}' if ov_avg_pos else 'N/A'}</span><br><span style="font-size:12px;color:#8b949e;">Avg Position</span></div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
 tab_labels = [
