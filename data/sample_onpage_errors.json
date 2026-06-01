@@ -1,18 +1,114 @@
 [
-  {"page_url": "https://giantbubblesau.com/", "type": "missing_title", "severity": "critical", "detail": "Homepage missing meta title", "fix": "Add <title>Giant Bubbles Australia | Bubble Kits & Party Entertainment</title>"},
-  {"page_url": "https://giantbubblesau.com/", "type": "missing_meta", "severity": "critical", "detail": "Homepage missing meta description", "fix": "Add meta description with primary keywords"},
-  {"page_url": "https://giantbubblesau.com/shop/", "type": "slow_page", "severity": "critical", "detail": "Shop page load time exceeds 4s", "fix": "Optimize product images, enable caching"},
-  {"page_url": "https://giantbubblesau.com/shop/giant-bubble-kit", "type": "dup_title", "severity": "warning", "detail": "Title duplicates other product pages", "fix": "Write unique title for this product"},
-  {"page_url": "https://giantbubblesau.com/shop/bubble-wand", "type": "img_broken", "severity": "warning", "detail": "Product image returns 404", "fix": "Fix image URL or upload replacement"},
-  {"page_url": "https://giantbubblesau.com/about", "type": "thin_content", "severity": "critical", "detail": "About page has only 150 words", "fix": "Expand to 500+ words with relevant keywords"},
-  {"page_url": "https://giantbubblesau.com/blog/", "type": "no_h1", "severity": "warning", "detail": "Blog index missing H1 tag", "fix": "Add H1 with keyword-rich title"},
-  {"page_url": "https://giantbubblesau.com/contact", "type": "no_meta", "severity": "info", "detail": "Contact page missing meta description", "fix": "Add meta description"},
-  {"page_url": "https://giantbubblesau.com/blog/giant-bubble-recipes", "type": "not_indexed", "severity": "warning", "detail": "Post not indexed after 2 weeks", "fix": "Check noindex tags and submit to GSC"},
-  {"page_url": "https://giantbubbles.co.nz/", "type": "missing_title", "severity": "critical", "detail": "Landing page missing title tag", "fix": "Add <title>Giant Bubbles NZ | Bubble Entertainment Auckland</title>"},
-  {"page_url": "https://giantbubbles.co.nz/", "type": "no_meta", "severity": "warning", "detail": "Missing meta description", "fix": "Add meta description with location keywords"},
-  {"page_url": "https://giantbubbles.co.nz/services", "type": "thin", "severity": "warning", "detail": "Services page has only 180 words", "fix": "Add detailed service descriptions"},
-  {"page_url": "https://giantbubbles.co.nz/blog", "type": "no_robots.txt", "severity": "critical", "detail": "robots.txt blocking /blog/", "fix": "Update robots.txt to allow blog indexing"},
-  {"page_url": "https://giantbubbles.co.nz/contact", "type": "canonical", "severity": "info", "detail": "Canonical points to wrong domain", "fix": "Fix canonical tag for NZ domain"},
-  {"page_url": "https://giantbubbles.co.nz/gallery", "type": "img_broken", "severity": "warning", "detail": "Gallery image missing alt text", "fix": "Add descriptive alt text to all images"},
-  {"page_url": "https://giantbubbles.co.nz/pricing", "type": "no_meta", "severity": "info", "detail": "Pricing page missing meta description", "fix": "Add meta description"}
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "duplicate_content",
+    "severity": "critical",
+    "description": "Duplicate content detected across .co.nz and .com.au (same page structures, limited differentiation between NZ and AU)",
+    "suggestion": "Implement hreflang tags en-nz / en-au and differentiate unique content for each market"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/blogs/",
+    "error_type": "stale_content",
+    "severity": "high",
+    "description": "Blog section has not been updated in 2+ years (last post Dec 2023)",
+    "suggestion": "Publish fresh blog content monthly — focus on seasonal topics and keyword opportunities"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/pages/about-us",
+    "error_type": "broken_link",
+    "severity": "high",
+    "description": "About Us page returns 404 error",
+    "suggestion": "Create the About Us page or set up a 301 redirect to the homepage"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "missing_schema",
+    "severity": "moderate",
+    "description": "Missing Organization and BreadcrumbList schema markup on homepage",
+    "suggestion": "Add Organization schema (name, logo, social profiles) and BreadcrumbList"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "missing_gmb",
+    "severity": "high",
+    "description": "No Google My Business listing found for the business",
+    "suggestion": "Create and verify a GMB listing to improve local pack presence"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "page_speed",
+    "severity": "moderate",
+    "description": "Mobile page speed score approximately 60/100 on PageSpeed Insights",
+    "suggestion": "Compress images, reduce render-blocking JavaScript, leverage browser caching"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/products/",
+    "error_type": "alt_text",
+    "severity": "moderate",
+    "description": "Product images missing descriptive alt text",
+    "suggestion": "Add keyword-rich alt text to all product images"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "meta_description",
+    "severity": "moderate",
+    "description": "Auto-generated or missing meta descriptions on key pages",
+    "suggestion": "Write unique 120–158 character meta descriptions for each page"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "schema_url_mismatch",
+    "severity": "critical",
+    "description": "Schema.org Offer URLs on product pages point to .co.nz domain instead of .com.au",
+    "suggestion": "Update schema JSON-LD to reference correct AU domain URLs"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "duplicate_content",
+    "severity": "critical",
+    "description": "AU site content largely duplicated from NZ site with minimal market-specific differentiation",
+    "suggestion": "Write unique AU-specific content, add local references and Australian pricing"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "missing_hreflang",
+    "severity": "high",
+    "description": "Missing hreflang tags to indicate en-nz and en-au language/region targeting",
+    "suggestion": "Add hreflang tags to all pages pointing to both country variants"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "page_speed",
+    "severity": "moderate",
+    "description": "Mobile page speed score ~55/100 on PageSpeed Insights",
+    "suggestion": "Optimize images, enable compression, reduce server response time"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "missing_schema",
+    "severity": "moderate",
+    "description": "Missing Organization and BreadcrumbList schema markup",
+    "suggestion": "Add Organization schema with AU-specific business details"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "alt_text",
+    "severity": "moderate",
+    "description": "Product images missing descriptive alt text on AU site",
+    "suggestion": "Add keyword-optimized alt text for all AU product images"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "meta_description",
+    "severity": "moderate",
+    "description": "Auto-generated meta descriptions on AU product pages",
+    "suggestion": "Write unique meta descriptions for AU pages with local keywords"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "thin_content",
+    "severity": "moderate",
+    "description": "AU site pages have very thin content compared to NZ site",
+    "suggestion": "Expand content with AU-specific information, customer stories, and local guides"
+  }
 ]
