@@ -1,0 +1,58 @@
+[
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "duplicate_content",
+    "severity": "critical",
+    "description": "Duplicate content detected across .co.nz and .com.au (same page structures, limited differentiation between NZ and AU)",
+    "suggestion": "Implement hreflang tags en-nz / en-au and differentiate unique content for each market"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/blogs/",
+    "error_type": "stale_content",
+    "severity": "high",
+    "description": "Blog section has not been updated in 2+ years (last post Dec 2023)",
+    "suggestion": "Publish fresh blog content monthly \u2014 focus on seasonal topics and keyword opportunities"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/pages/about-us",
+    "error_type": "broken_link",
+    "severity": "high",
+    "description": "About Us page returns 404 error",
+    "suggestion": "Create the About Us page or set up a 301 redirect to the homepage"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "missing_schema",
+    "severity": "moderate",
+    "description": "Missing Organization and BreadcrumbList schema markup on homepage",
+    "suggestion": "Add Organization schema (name, logo, social profiles) and BreadcrumbList"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "missing_gmb",
+    "severity": "high",
+    "description": "No Google My Business listing found for the business",
+    "suggestion": "Create and verify a GMB listing to improve local pack presence"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "page_speed",
+    "severity": "moderate",
+    "description": "Mobile page speed score approximately 60/100 on PageSpeed Insights",
+    "suggestion": "Compress images, reduce render-blocking JavaScript, leverage browser caching"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/products/",
+    "error_type": "alt_text",
+    "severity": "moderate",
+    "description": "Product images missing descriptive alt text",
+    "suggestion": "Add keyword-rich alt text to all product images"
+  },
+  {
+    "url": "https://giantbubbles.co.nz/",
+    "error_type": "meta_description",
+    "severity": "moderate",
+    "description": "Auto-generated or missing meta descriptions on key pages",
+    "suggestion": "Write unique 120\u2013158 character meta descriptions for each page"
+  }
+]

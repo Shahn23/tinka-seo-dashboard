@@ -19,6 +19,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# Vercel
+.vercel
+
 # Database - WAL/shm artifacts only (the DB itself is tracked for cloud deployment)
 data/*.db-wal
 data/*.db-shm

@@ -1,0 +1,58 @@
+[
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "schema_url_mismatch",
+    "severity": "critical",
+    "description": "Schema.org Offer URLs on product pages point to .co.nz domain instead of .com.au",
+    "suggestion": "Update schema JSON-LD to reference correct AU domain URLs"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "duplicate_content",
+    "severity": "critical",
+    "description": "AU site content largely duplicated from NZ site with minimal market-specific differentiation",
+    "suggestion": "Write unique AU-specific content, add local references and Australian pricing"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "missing_hreflang",
+    "severity": "high",
+    "description": "Missing hreflang tags to indicate en-nz and en-au language/region targeting",
+    "suggestion": "Add hreflang tags to all pages pointing to both country variants"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "page_speed",
+    "severity": "moderate",
+    "description": "Mobile page speed score ~55/100 on PageSpeed Insights",
+    "suggestion": "Optimize images, enable compression, reduce server response time"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "missing_schema",
+    "severity": "moderate",
+    "description": "Missing Organization and BreadcrumbList schema markup",
+    "suggestion": "Add Organization schema with AU-specific business details"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "alt_text",
+    "severity": "moderate",
+    "description": "Product images missing descriptive alt text on AU site",
+    "suggestion": "Add keyword-optimized alt text for all AU product images"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "meta_description",
+    "severity": "moderate",
+    "description": "Auto-generated meta descriptions on AU product pages",
+    "suggestion": "Write unique meta descriptions for AU pages with local keywords"
+  },
+  {
+    "url": "https://giantbubblesau.com/",
+    "error_type": "thin_content",
+    "severity": "moderate",
+    "description": "AU site pages have very thin content compared to NZ site",
+    "suggestion": "Expand content with AU-specific information, customer stories, and local guides"
+  }
+]

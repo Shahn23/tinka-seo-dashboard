@@ -1,71 +1,82 @@
 # Tinka SEO Dashboard
 
-Live SEO monitoring dashboard for Giant Bubbles by Tinka — tracking keyword rankings, on-page errors, and content ideas for both Australian and New Zealand domains.
-
-## Quick Start
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Initialize the database (creates tables + seed domains)
-python scripts/init_db.py
-
-# Seed with sample data
-python scripts/seed_data.py
-
-# Launch dashboard
-streamlit run dashboard.py
-```
-
-## Dashboard Sections
-
-1. **Overview** — Key metrics at a glance (rankings tracked, open issues, content backlog)
-2. **Keyword Rankings** — Historical trend charts, filterable by domain and keyword
-3. **On-Page Errors** — Error table with severity, status tracking, and fix progress
-4. **Content Ideas** — Backlog with priority scoring, keyword ranking context
-5. **Data Sync** — Manual sync trigger and sync history log
+Streamlit dashboard for Giant Bubbles by Tinka — tracks keyword rankings, on-page SEO issues, and content ideas across giantbubbles.co.nz and giantbubblesau.com.
 
 ## Data Sources
 
-- **Google Search Console** — Live GSC API for NZ domain (giantbubbles.co.nz), 833 rows synced
-- **Manual input** — Keyword research and SEO audit findings
-- **Backlog CSV** — Content idea backlog with priority scoring
+- **Google Search Console** — Keyword rankings, clicks, impressions
+- **On-page error scans** — Technical SEO issues by domain
+- **Content backlog** — Content ideas with opportunity scoring
+
+## Local Development
+
+```bash
+pip install -r requirements.txt
+streamlit run seo_dashboard.py --server.headless true --server.port 8510
+```
+
+## Daily Data Sync
+
+The ingestion pipeline runs daily at 6 AM via Hermes cron:
+
+```bash
+cd scripts/
+python daily_sync.py --live --days 1
+```
 
 ## Deployment
 
-### Streamlit Community Cloud
-1. Push this repo to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect your repo and deploy
-4. Set `requirements.txt` as the dependency file
+### Option A: Hugging Face Spaces (Recommended)
 
-### Render
-1. Create a new Web Service
-2. Set the build command: `pip install -r requirements.txt`
-3. Set the start command: `streamlit run dashboard.py --server.port $PORT`
+```bash
+# 1. Login (get token from https://huggingface.co/settings/tokens)
+huggingface-cli login
+
+# 2. Create Space
+huggingface-cli repo create tinka-seo-dashboard --type space --space-sdk streamlit
+
+# 3. Upload files
+cd /path/to/project
+git init && git add . && git commit -m "Initial commit"
+git remote add space https://huggingface.co/spaces/<USERNAME>/tinka-seo-dashboard
+git push --force space main
+```
+
+### Option B: Streamlit Community Cloud
+
+1. Push this repo to GitHub
+2. Go to https://streamlit.io/cloud
+3. Connect repo and deploy
+
+### Option C: Vercel
+
+```bash
+npm i -g vercel
+vercel login
+cd /path/to/project
+vercel --prod
+```
 
 ## Project Structure
 
 ```
-├── dashboard.py              # Main Streamlit dashboard
+tinka-seo-dashboard/
+├── seo_dashboard.py          # Main dashboard app
 ├── requirements.txt          # Python dependencies
-├── config/
-│   ├── config.example.yaml   # Config template
-│   └── config.yaml           # Local config (gitignored)
+├── vercel.json               # Vercel deployment config
+├── README.md                 # This file
 ├── data/
-│   ├── schema.sql            # Database schema (7 tables, 5 views)
-│   └── seo_dashboard.db      # SQLite database (gitignored)
-├── docs/
+│   ├── seo_dashboard.db      # SQLite database
+│   ├── schema.sql            # DB schema
+│   ├── sample_onpage_errors.json
+│   └── sample_content_ideas.csv
 ├── scripts/
-│   ├── init_db.py            # Initialize database
-│   └── seed_data.py          # Seed with sample data
-├── src/
-│   ├── config.py             # YAML config loader
-│   ├── database.py           # SQLite CRUD layer
-│   ├── gsc_client.py         # GSC API client
-│   ├── models.py             # Python data models
-│   └── onpage_ingestion.py   # On-page error ingestion
-└── tests/
-    └── test_models.py        # Unit tests
+│   ├── daily_sync.py         # Orchestrator for all 3 modules
+│   ├── sync_gsc.py           # GSC rankings sync
+│   ├── ingest_errors.py      # On-page error ingestion
+│   ├── ingest_content.py     # Content idea ingestion
+│   └── init_db.py            # Database initialization
+└── config/
+    ├── gsc_credentials.json  # GSC service account (create your own)
+    └── seo_config.yaml       # SEO-specific configuration
 ```

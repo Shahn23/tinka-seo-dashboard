@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tinka SEO Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1117;
+            color: #ccc;
+            min-height: 100vh;
+        }
+        .app-header {
+            background: linear-gradient(135deg, #1a1c2e, #16182a);
+            border-bottom: 1px solid #2a2d4a;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .app-header h1 { font-size: 20px; color: #00d4aa; }
+        .app-header .sub { color: #666; font-size: 12px; }
+        .app-layout {
+            display: flex;
+            min-height: calc(100vh - 60px);
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: #12141e;
+            border-right: 1px solid #2a2d4a;
+            padding: 20px 16px;
+            flex-shrink: 0;
+        }
+        .sidebar h2 {
+            font-size: 15px;
+            color: #aaa;
+            margin-bottom: 16px;
+        }
+        .sidebar .filter-group {
+            margin-bottom: 16px;
+        }
+        .sidebar .filter-group label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .sidebar .filter-group select {
+            width: 100%;
+            padding: 8px 10px;
+            background: #1e2036;
+            border: 1px solid #2a2d4a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 13px;
+        }
+        .sidebar .filter-group select:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+        .sidebar .footer {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #555;
+        }
+        .btn-filter {
+            width: 100%;
+            padding: 8px;
+            background: #00d4aa;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .btn-filter:hover { background: #00e6b5; }
+        /* Main content */
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid #2a2d4a;
+            margin-bottom: 24px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: #ccc; }
+        .tab-btn.active {
+            color: #00d4aa;
+            border-bottom-color: #00d4aa;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Metric cards */
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: #1a1c2e;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #2a2d4a;
+        }
+        .metric-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #00d4aa;
+        }
+        .metric-card .label {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #8888aa;
+        }
+        .metric-card.warn .value { color: #ff8800; }
+        .metric-card.danger .value { color: #ff4444; }
+        .metric-card.ok .value { color: #4ecdc4; }
+        /* Grid layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .grid-2 .chart-box {
+            background: #1a1c2e;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid #2a2d4a;
+        }
+        /* Quick wins */
+        .quick-wins-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .quick-win {
+            background: linear-gradient(135deg, #002b1a, #004d2e);
+            border: 1px solid #00d4aa;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .quick-win .kw { color: #00d4aa; font-weight: 600; font-size: 14px; }
+        .quick-win .meta { color: #aaa; font-size: 12px; }
+        .quick-win .detail { color: #888; font-size: 11px; margin-top: 4px; }
+        /* Section headers */
+        h2 { font-size: 18px; margin-bottom: 16px; }
+        h3 { font-size: 15px; margin-bottom: 12px; color: #ddd; }
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: #1a1c2e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th {
+            background: #22243e;
+            padding: 8px 12px;
+            text-align: left;
+            color: #888;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .data-table td {
+            padding: 8px 12px;
+            border-top: 1px solid #2a2d4a;
+        }
+        .data-table tr:hover td { background: #1e2036; }
+        .expandable { cursor: pointer; }
+        .expandable .expando { float: right; color: #555; }
+        /* Severity badges */
+        .sev-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .sev-critical { background: #ff4444; color: white; }
+        .sev-high { background: #ff8800; color: white; }
+        .sev-moderate { background: #ffcc00; color: #222; }
+        .sev-low { background: #88ccff; color: #222; }
+        /* Issue details */
+        .issue-detail {
+            background: #16182a;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #444;
+        }
+        .issue-detail.critical { border-left-color: #ff4444; }
+        .issue-detail.high { border-left-color: #ff8800; }
+        .issue-detail.moderate { border-left-color: #ffcc00; }
+        .issue-detail .desc { color: #aaa; font-size: 13px; margin: 4px 0; }
+        .issue-detail .suggestion { color: #4ecdc4; font-size: 12px; }
+        .issue-detail .meta { color: #666; font-size: 11px; }
+        .issue-detail.fixed { opacity: 0.6; }
+        /* Content idea cards */
+        .top-picks {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .top-pick {
+            background: #1a1c2e;
+            border: 1px solid #2a2d4a;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .top-pick .title { color: #00d4aa; font-weight: 600; }
+        .top-pick .meta { color: #888; font-size: 12px; }
+        /* Status box */
+        .status-box {
+            background: #1a1c2e;
+            border: 1px solid #2a2d4a;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .status-box .icon { font-size: 24px; }
+        /* Select for keyword trend */
+        .trend-select {
+            margin-bottom: 16px;
+        }
+        .trend-select select {
+            padding: 8px 12px;
+            background: #1e2036;
+            border: 1px solid #2a2d4a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 13px;
+            min-width: 300px;
+        }
+        @media (max-width: 768px) {
+            .app-layout { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #2a2d4a; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-header">
+    <div>
+        <h1>🔍 SEO Dashboard</h1>
+        <div class="sub">Giant Bubbles by Tinka — {{ now }}</div>
+    </div>
+</div>
+<div class="app-layout">
+    <!-- Sidebar -->
+    <form class="sidebar" method="GET" action="/">
+        <h2>Filters</h2>
+        <div class="filter-group">
+            <label for="domain">Domain</label>
+            <select name="domain" id="domain">
+                {% for d in filters.domains %}
+                <option value="{{ d }}" {% if selected_domain == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="category">Category</label>
+            <select name="category" id="category">
+                {% for c in filters.categories %}
+                <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="intent">Intent</label>
+            <select name="intent" id="intent">
+                {% for i in filters.intents %}
+                <option value="{{ i }}" {% if selected_intent == i %}selected{% endif %}>{{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-filter">Apply Filters</button>
+        <div class="footer">Last updated: {{ now }}</div>
+    </form>
+
+    <!-- Main -->
+    <div class="main-content">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event,'tab-keywords')">🔑 Keyword Rankings</button>
+            <button class="tab-btn" onclick="switchTab(event,'tab-issues')">🛠️ SEO Issues</button>
+            <button class="tab-btn" onclick="switchTab(event,'tab-content')">📝 Content Backlog</button>
+            <button class="tab-btn" onclick="switchTab(event,'tab-settings')">🔄 Sync & Settings</button>
+        </div>
+
+        <!-- TAB 1: Keywords -->
+        <div id="tab-keywords" class="tab-content active">
+            <h2>Keyword Rankings</h2>
+            {% if kw_metrics %}
+            <div class="metric-row">
+                <div class="metric-card"><div class="value">{{ kw_metrics.count }}</div><div class="label">Keywords Tracked</div></div>
+                <div class="metric-card"><div class="value">{{ kw_metrics.avg_pos }}</div><div class="label">Avg Position</div></div>
+                <div class="metric-card warn"><div class="value">{{ "{:,}".format(kw_metrics.total_clicks) }}</div><div class="label">Total Clicks (7d)</div></div>
+                <div class="metric-card ok"><div class="value">{{ "{:,}".format(kw_metrics.total_impressions) }}</div><div class="label">Total Impressions (7d)</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="chart-box">{{ kw_charts.vol_by_cat | safe }}</div>
+                <div class="chart-box">{{ kw_charts.opp_dist | safe }}</div>
+            </div>
+
+            {% if quick_wins %}
+            <h3>⚡ Quick Wins (High Opportunity, Low Difficulty)</h3>
+            <div class="quick-wins-row">
+                {% for qw in quick_wins %}
+                <div class="quick-win">
+                    <div class="kw">{{ qw.keyword }}</div>
+                    <div class="meta">{{ qw.domain }}</div>
+                    <div class="detail">Score: {{ "%.0f"|format(qw.opportunity_score) }} | Vol: {{ "{:,}".format(qw.volume) }} | Pos: {{ "%.0f"|format(qw.current_position) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <h3>📈 Position Trend</h3>
+            <div class="trend-select">
+                <form method="GET" action="/">
+                    {% for key, val in query_params_list %}
+                    <input type="hidden" name="{{ key }}" value="{{ val }}">
+                    {% endfor %}
+                    <select name="keyword" onchange="this.form.submit()">
+                        <option value="">Select a keyword...</option>
+                        {% for kw in keyword_list %}
+                        <option value="{{ kw }}" {% if selected_keyword == kw %}selected{% endif %}>{{ kw }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            {% if trend_chart %}
+            {{ trend_chart | safe }}
+            {% endif %}
+
+            <h3>📋 All Keywords</h3>
+            <div style="max-height:400px;overflow-y:auto">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Domain</th><th>Keyword</th><th>Category</th><th>Intent</th>
+                    <th>Vol</th><th>Score</th><th>Diff</th><th>Pos</th><th>Clicks</th><th>Imp</th>
+                </tr></thead>
+                <tbody>
+                    {% for r in kw_display_list %}
+                    <tr>
+                        <td>{{ r.Domain }}</td>
+                        <td style="font-weight:600">{{ r.Keyword }}</td>
+                        <td>{{ r.Category }}</td>
+                        <td>{{ r.Intent }}</td>
+                        <td>{{ "{:,}".format(r.Vol) if r.Vol else '-' }}</td>
+                        <td>{{ r.Score }}</td>
+                        <td>{{ r.Diff }}</td>
+                        <td>{{ "%.0f"|format(r.Pos) if r.Pos else '-' }}</td>
+                        <td>{{ r.Clicks if r.Clicks else '-' }}</td>
+                        <td>{{ "{:,}".format(r.Imp) if r.Imp else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <p style="color:#888">No keyword data found. Run data ingestion to populate the database.</p>
+            {% endif %}
+        </div>
+
+        <!-- TAB 2: Issues -->
+        <div id="tab-issues" class="tab-content">
+            <h2>Technical SEO Issues</h2>
+            {% if issues_metrics %}
+            <div class="metric-row">
+                <div class="metric-card danger"><div class="value">{{ issues_metrics.open }}</div><div class="label">Open Issues</div></div>
+                <div class="metric-card danger"><div class="value">{{ issues_metrics.critical }}</div><div class="label">Critical</div></div>
+                <div class="metric-card warn"><div class="value">{{ issues_metrics.high }}</div><div class="label">High</div></div>
+                <div class="metric-card"><div class="value">{{ issues_metrics.moderate }}</div><div class="label">Moderate</div></div>
+                <div class="metric-card ok"><div class="value">{{ issues_metrics.fixed }}</div><div class="label">Fixed</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="chart-box">{{ issues_charts.sev_pie | safe }}</div>
+                <div class="chart-box">{{ issues_charts.dom_bar | safe }}</div>
+            </div>
+
+            <div style="margin-bottom:12px">
+                <form method="GET" action="/" style="display:inline">
+                    {% for key, val in query_params_list %}
+                    <input type="hidden" name="{{ key }}" value="{{ val }}">
+                    {% endfor %}
+                    <select name="sev" onchange="this.form.submit()" style="padding:8px 12px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+                        <option value="All" {% if selected_sev == 'All' %}selected{% endif %}>All Severities</option>
+                        <option value="critical" {% if selected_sev == 'critical' %}selected{% endif %}>Critical</option>
+                        <option value="high" {% if selected_sev == 'high' %}selected{% endif %}>High</option>
+                        <option value="moderate" {% if selected_sev == 'moderate' %}selected{% endif %}>Moderate</option>
+                        <option value="low" {% if selected_sev == 'low' %}selected{% endif %}>Low</option>
+                    </select>
+                </form>
+            </div>
+
+            {% for issue in issue_rows %}
+            <div class="issue-detail {{ issue.severity }} {% if issue.status == 'fixed' %}fixed{% endif %}">
+                <div>
+                    <span class="sev-badge sev-{{ issue.severity }}">{{ issue.severity }}</span>
+                    <strong style="margin-left:8px">{{ issue.error_type.replace('_', ' ').title() }}</strong>
+                    <span style="float:right;color:#888;font-size:12px">{{ "✅ Fixed" if issue.status == 'fixed' else "🔴 Open" }}</span>
+                </div>
+                <div class="meta">{{ issue.domain }} | {{ issue.page_url }}</div>
+                <div class="desc">{{ issue.description }}</div>
+                <div class="suggestion">💡 {{ issue.suggestion }}</div>
+            </div>
+            {% endfor %}
+            {% if not issue_rows %}
+            <p style="color:#888">No SEO issues found.</p>
+            {% endif %}
+        </div>
+
+        <!-- TAB 3: Content -->
+        <div id="tab-content" class="tab-content">
+            <h2>Content Idea Backlog</h2>
+            {% if ideas_metrics %}
+            <div class="metric-row">
+                <div class="metric-card"><div class="value">{{ ideas_metrics.count }}</div><div class="label">Ideas</div></div>
+                <div class="metric-card"><div class="value">{{ ideas_metrics.avg_score }}</div><div class="label">Avg Score</div></div>
+                <div class="metric-card ok"><div class="value">{{ "{:,}".format(ideas_metrics.total_searches) }}</div><div class="label">Total Monthly Searches</div></div>
+            </div>
+
+            <div class="grid-2">
+                <div class="chart-box">{{ ideas_charts.matrix | safe }}</div>
+                <div class="chart-box">{{ ideas_charts.vol_by_cat | safe }}</div>
+            </div>
+
+            <div style="margin-bottom:12px">
+                <form method="GET" action="/" style="display:inline">
+                    {% for key, val in query_params_list %}
+                    <input type="hidden" name="{{ key }}" value="{{ val }}">
+                    {% endfor %}
+                    <select name="effort" onchange="this.form.submit()" style="padding:8px 12px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+                        <option value="All" {% if selected_effort == 'All' %}selected{% endif %}>All Effort Levels</option>
+                        <option value="easy" {% if selected_effort == 'easy' %}selected{% endif %}>Easy</option>
+                        <option value="medium" {% if selected_effort == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="hard" {% if selected_effort == 'hard' %}selected{% endif %}>Hard</option>
+                    </select>
+                </form>
+            </div>
+
+            {% if top_picks %}
+            <h3>⭐ Top Picks (Score ≥ 8.0)</h3>
+            <div class="top-picks">
+                {% for pick in top_picks %}
+                <div class="top-pick">
+                    <div class="title">{{ pick.title }}</div>
+                    <div class="meta">Score: {{ "%.0f"|format(pick.opportunity_score) }} | Searches: {{ "{:,}".format(pick.estimated_searches) }}</div>
+                    <div class="meta" style="margin-top:4px;color:#777">Keyword: {{ pick.target_keyword }} | Effort: {{ pick.effort }} | Type: {{ pick.content_type }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <h3>📋 All Ideas</h3>
+            <div style="max-height:400px;overflow-y:auto">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Title</th><th>Keyword</th><th>Category</th><th>Searches</th><th>Score</th><th>Effort</th><th>Type</th>
+                </tr></thead>
+                <tbody>
+                    {% for r in ideas_list %}
+                    <tr>
+                        <td style="font-weight:600">{{ r.Title }}</td>
+                        <td>{{ r.Keyword }}</td>
+                        <td>{{ r.Category }}</td>
+                        <td>{{ "{:,}".format(r.Searches) }}</td>
+                        <td>{{ "%.1f"|format(r.Score) }}</td>
+                        <td>{{ r.Effort }}</td>
+                        <td>{{ r.Type }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <p style="color:#888">No content ideas found.</p>
+            {% endif %}
+        </div>
+
+        <!-- TAB 4: Settings -->
+        <div id="tab-settings" class="tab-content">
+            <h2>Sync & Settings</h2>
+            <div class="grid-2">
+                <div>
+                    <h3>📡 Google Search Console Sync</h3>
+                    <div class="status-box">
+                        {% if last_sync %}
+                        <div class="icon">{{ "✅" if last_sync.status == 'success' else "❌" if last_sync.status == 'failed' else "🔄" }}</div>
+                        <p><strong>Last Sync:</strong> {{ last_sync.completed_at or 'In progress...' }}</p>
+                        <p><strong>Status:</strong> {{ last_sync.status }}</p>
+                        <p><strong>Rows:</strong> {{ last_sync.rows_synced or 'N/A' }}</p>
+                        {% if last_sync.error %}
+                        <p style="color:#ff4444;margin-top:8px">{{ last_sync.error }}</p>
+                        {% endif %}
+                        {% else %}
+                        <p>No syncs yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <h3>⏰ Daily Schedule</h3>
+                    <div class="status-box">
+                        <p>🕐 <strong>6:00 AM daily</strong> — Hermes cron</p>
+                        <p style="color:#888;font-size:12px;margin-top:8px">
+                            Runs 3 ingestion modules: GSC rankings, on-page errors, content ideas
+                        </p>
+                    </div>
+
+                    <h3>📁 Project Status</h3>
+                    <div class="status-box">
+                        <p>📍 <strong>Location:</strong> ~/OneDrive/Desktop/tinka-seo-dashboard/</p>
+                        <p>🔗 <strong>Vercel:</strong> tinka-seo-dashboard.vercel.app</p>
+                        <p>🐍 <strong>Python:</strong> FastAPI + Plotly + pandas</p>
+                        <p>🗄️ <strong>Database:</strong> SQLite (seo_dashboard.db)</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if sync_hist %}
+            <h3>Sync History</h3>
+            <table class="data-table">
+                <thead><tr><th>Source</th><th>Status</th><th>Rows</th><th>Started</th><th>Completed</th></tr></thead>
+                <tbody>
+                    {% for s in sync_hist %}
+                    <tr>
+                        <td>{{ s.source }}</td>
+                        <td>{{ "✅" if s.status == 'success' else "❌" if s.status == 'failed' else "🔄" }} {{ s.status }}</td>
+                        <td>{{ s.rows_synced or '-' }}</td>
+                        <td>{{ s.started_at }}</td>
+                        <td>{{ s.completed_at or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(event, tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+    // Resize plots in the now-visible tab
+    const plots = document.getElementById(tabId).querySelectorAll('.js-plotly-plot');
+    plots.forEach(p => Plotly.Plots.resize(p));
+}
+</script>
+</body>
+</html>
