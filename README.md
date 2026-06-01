@@ -4,9 +4,12 @@ Streamlit dashboard for Giant Bubbles by Tinka — tracks keyword rankings, on-p
 
 ## Data Sources
 
-- **Google Search Console** — Keyword rankings, clicks, impressions
-- **On-page error scans** — Technical SEO issues by domain
-- **Content backlog** — Content ideas with opportunity scoring
+- **Google Search Console** — Keyword rankings, clicks, impressions (via `scripts/sync_gsc.py`)
+- **On-page error scans** — Technical SEO issues by domain (from `data/errors_au.json`, `data/errors_nz.json`)
+- **Keyword research** — 72-keyword AU+NZ universe with opportunity scoring (from `data/tinka_keyword_research.csv`)
+- **Content backlog** — Content ideas with opportunity scoring (in DB seed + `data/tinka_blog_post_ideas.md`)
+
+All parent task data is integrated into the SQLite DB via `scripts/ingest_parent_data.py`.
 
 ## Local Development
 
@@ -66,11 +69,16 @@ tinka-seo-dashboard/
 ├── vercel.json               # Vercel deployment config
 ├── README.md                 # This file
 ├── data/
-│   ├── seo_dashboard.db      # SQLite database
+│   ├── seo_dashboard.db      # SQLite database (integrated data)
 │   ├── schema.sql            # DB schema
+│   ├── tinka_keyword_research.csv  # 72-keyword AU+NZ universe
+│   ├── tinka_blog_post_ideas.md    # 10 blog post ideas with outlines
+│   ├── errors_au.json        # Real on-page errors — giantbubblesau.com
+│   ├── errors_nz.json        # Real on-page errors — giantbubbles.co.nz
 │   ├── sample_onpage_errors.json
 │   └── sample_content_ideas.csv
 ├── scripts/
+│   ├── ingest_parent_data.py # Parent task data integration script
 │   ├── daily_sync.py         # Orchestrator for all 3 modules
 │   ├── sync_gsc.py           # GSC rankings sync
 │   ├── ingest_errors.py      # On-page error ingestion
