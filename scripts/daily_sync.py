@@ -260,6 +260,73 @@ def run_content_ingest(dry_run: bool = False, force: bool = False) -> dict:
         return {"source": "content", "status": "failed", "rows": 0, "error": str(e)}
 
 
+def run_rank_report() -> dict:
+    """Run the rank tracker and produce a summary."""
+    from datetime import date
+    log.info("=" * 40)
+    log.info("Rank Tracker Report")
+    log.info("=" * 40)
+
+    import sqlite3
+    from pathlib import Path
+    BASE = Path(__file__).resolve().parent.parent
+
+    # Get counts directly
+    conn = sqlite3.connect(str(BASE / "data" / "seo_dashboard.db"))
+    conn.row_factory = sqlite3.Row
+
+    total = conn.execute("SELECT COUNT(*) FROM keywords").fetchone()[0]
+    ranked = conn.execute("""
+        SELECT COUNT(DISTINCT k.id) as c FROM keywords k
+        JOIN rank_history rh ON k.id = rh.keyword_id
+    """).fetchone()["c"]
+    avg_pos = conn.execute("""
+        SELECT AVG(position) FROM rank_history
+        WHERE (keyword_id, date) IN (
+            SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id
+        )
+    """).fetchone()[0]
+
+    # Rising / falling counts
+    today_latest = conn.execute("""
+        SELECT keyword_id, position FROM rank_history rh1
+        WHERE id = (SELECT MAX(id) FROM rank_history rh2 WHERE rh2.keyword_id = rh1.keyword_id)
+    """).fetchall()
+    today_map = {r["keyword_id"]: r["position"] for r in today_latest}
+
+    week_ago = (date.today() - __import__("datetime").timedelta(days=7)).isoformat()
+    past_rows = conn.execute("""
+        SELECT keyword_id, position FROM rank_history
+        WHERE date = ?
+    """, (week_ago,)).fetchall()
+    past_map = {r["keyword_id"]: r["position"] for r in past_rows}
+
+    rising = falling = stable = 0
+    for kw_id, t_pos in today_map.items():
+        p_pos = past_map.get(kw_id)
+        if p_pos is None:
+            continue
+        diff = p_pos - t_pos
+        if diff > 0.5:
+            rising += 1
+        elif diff < -0.5:
+            falling += 1
+        else:
+            stable += 1
+
+    new_entrants = sum(1 for kw_id in today_map if kw_id not in past_map)
+    conn.close()
+
+    unranked = total - ranked
+    log.info(f"Keywords: {total} total, {ranked} ranked ({ranked/total*100:.0f}%), {unranked} unranked")
+    log.info(f"Avg position: {avg_pos:.1f}")
+    log.info(f"7-day change: {rising} ↑, {falling} ↓, {stable} —, {new_entrants} new")
+    log.info("Rank Tracker Report — complete")
+
+    return {"source": "rank_tracker", "status": "success",
+            "rows": total, "metadata": f"{ranked}/{total} ranked, avg {avg_pos:.1f}, {rising}↑/{falling}↓"}
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 
@@ -278,12 +345,16 @@ def run_all(live: bool, days: int, dry_run: bool, force: bool, gsc_only: bool):
     r1 = run_gsc_sync(live=live, days=days, force=force)
     results.append(r1)
 
+    # 2. Rank Tracker Report
+    r_report = run_rank_report()
+    results.append(r_report)
+
     if not gsc_only:
-        # 2. On-Page Errors
+        # 3. On-Page Errors
         r2 = run_error_ingest(dry_run=dry_run, force=force)
         results.append(r2)
 
-        # 3. Content Ideas
+        # 4. Content Ideas
         r3 = run_content_ingest(dry_run=dry_run, force=force)
         results.append(r3)
 
