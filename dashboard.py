@@ -173,11 +173,12 @@ tab_labels = [
     "📊 Competitive",
     "🛠️ SEO Issues",
     "📝 Content",
+    "✍️ Content Studio",
     "🔔 Alerts",
     "🔄 Settings",
 ]
 tabs = st.tabs(tab_labels)
-tab1, tab2, tab3, tab4, tab5, tab6 = tabs
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = tabs
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 1: KEYWORD RANKINGS (ENHANCED)
@@ -984,9 +985,192 @@ with tab4:
         st.info("No content ideas found.")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 5: ALERTS (NEW)
+# TAB 5: ✍️ CONTENT STUDIO (NEW v0.4 — Article Writing Pipeline)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab5:
+    st.header("✍️ Content Studio v0.4")
+    st.caption("Write SEO articles from researched keywords, post drafts to Shopify, and track your publishing pipeline")
+
+    st.markdown("""
+    <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
+    <strong>🚀 Article Pipeline Active:</strong><br>
+    1. Pick a high-opportunity keyword from the research below<br>
+    2. Write a full SEO-optimized article (with the help of AI)<br>
+    3. Push to Shopify as a draft blog post<br>
+    4. Review and publish from the Shopify admin<br>
+    <em>First article already posted as a draft — check your Shopify Blog → Drafts!</em>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Published Articles ────────────────────────────────────────────────
+    st.subheader("📚 Published Articles")
+
+    articles_df = query_db("""
+        SELECT pa.id, pa.title, pa.market, pa.target_domain, pa.status,
+               pa.target_keywords, pa.word_count, pa.shopify_article_id,
+               pa.created_at, pa.published_at
+        FROM published_articles pa
+        ORDER BY pa.created_at DESC
+    """)
+
+    if not articles_df.empty:
+        for _, row in articles_df.iterrows():
+            status_color = "#ffcc00" if row["status"] == "draft" else "#00d4aa" if row["status"] == "published" else "#ff4444"
+            status_icon = "📄" if row["status"] == "draft" else "✅" if row["status"] == "published" else "❌"
+            admin_url = f"https://admin.shopify.com/store/giant-bubbles-by-tinka/admin/articles/{int(row['shopify_article_id'])}" if pd.notna(row["shopify_article_id"]) else None
+
+            st.markdown(f"""
+            <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:14px; margin:8px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div>
+                        <strong style="color:{status_color}">{status_icon} {row['title']}</strong>
+                        <span style="font-size:11px;color:#888;margin-left:10px;">🇳🇿 {row['market']}</span>
+                    </div>
+                    <span style="font-size:11px;background:{status_color};color:#000;padding:2px 8px;border-radius:4px;font-weight:600;">
+                        {row['status'].upper()}
+                    </span>
+                </div>
+                <div style="font-size:12px;color:#888;margin-top:6px;">
+                    {int(row['word_count'])} words | Keywords: {row['target_keywords'] or 'N/A'} | Created: {str(row['created_at'])[:19]}
+                </div>
+                <div style="margin-top:6px;">
+                    <a href="{admin_url}" target="_blank" style="color:#58a6ff;font-size:12px;">🔗 Open in Shopify Admin →</a>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No articles published yet. Use the pipeline below to write your first one!")
+
+    st.divider()
+
+    # ── Content Ideas Ready for Writing ───────────────────────────────────
+    st.subheader("🎯 Ready to Write — Unpublished Content Ideas")
+    st.caption("These high-opportunity content ideas don't have articles yet. Pick one to author.")
+
+    ready_to_write = query_db("""
+        SELECT ci.id, ci.title, ci.target_keyword, ci.category, ci.estimated_searches,
+               ci.opportunity_score, ci.effort, ci.outline
+        FROM content_ideas ci
+        LEFT JOIN published_articles pa ON ci.id = pa.content_idea_id
+        WHERE pa.id IS NULL AND ci.status != 'published'
+        ORDER BY ci.opportunity_score DESC, ci.estimated_searches DESC
+    """)
+
+    if not ready_to_write.empty:
+        st.markdown(f"**{len(ready_to_write)} content ideas ready** — sorted by opportunity score (highest first)")
+
+        for _, row in ready_to_write.head(12).iterrows():
+            target_kw = row["target_keyword"] or "N/A"
+            vol = int(row["estimated_searches"]) if pd.notna(row["estimated_searches"]) else 0
+            score = row["opportunity_score"] if pd.notna(row["opportunity_score"]) else 0
+            effort = row["effort"] or "medium"
+
+            st.markdown(f"""
+            <div style="background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:12px; margin:6px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div>
+                        <strong style="color:#00d4aa;">{row['title'][:60]}</strong><br>
+                        <span style="color:#888;font-size:12px;">
+                            🎯 {target_kw} | 📈 {vol:,}/mo | ⭐ {score:.0f} opp | 💪 {effort}
+                        </span>
+                    </div>
+                    <span style="font-size:11px;background:#002b1a;color:#00d4aa;padding:2px 8px;border-radius:4px;">
+                        {row['category'] or 'general'}
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.info("""
+        **💡 To write a new article:**
+        ```
+        # 1. Pick an idea from above, create the HTML article file in articles/
+        # 2. Run the article writer:
+        python scripts/article_writer.py --idea <ID> --body articles/your-article.html --market NZ
+        # 3. Check your Shopify admin → Blog Posts → Drafts to review & publish
+        ```
+        """)
+
+        # Show the pipeline command
+        st.divider()
+        st.subheader("⚡ Quick Launch — Write Next Article")
+        idea_ids = ready_to_write["id"].tolist()
+        idea_labels = [
+            f"[#{r['id']}] {r['title'][:50]} (⭐{r['opportunity_score']:.0f})"
+            for _, r in ready_to_write.iterrows()
+        ]
+        selected_idx = 0
+        if idea_labels:
+            selected_label = st.selectbox("Select a content idea to write", idea_labels, key="cs_idea")
+            selected_idx = idea_labels.index(selected_label)
+            selected_row = ready_to_write.iloc[selected_idx]
+
+            col_cmd1, col_cmd2 = st.columns([1, 1])
+            with col_cmd1:
+                market = st.radio("Target Market", ["NZ", "AU"], index=0, key="cs_market")
+            with col_cmd2:
+                st.markdown("**Article template hint:**")
+                if selected_row.get("outline") and pd.notna(selected_row["outline"]):
+                    st.caption(f"Outline available in DB: {str(selected_row['outline'])[:200]}...")
+                else:
+                    st.caption("See blog_post_topics_from_new_keywords_v2.md for full outlines")
+
+            st.code(
+                f"# To write this article:\n"
+                f"# 1. Create articles/{selected_row['id']}_{selected_row['target_keyword'] or 'article'}.html\n"
+                f"# 2. Run:\n"
+                f"python scripts/article_writer.py --idea {int(selected_row['id'])} \\\n"
+                f"  --body articles/{selected_row['target_keyword'] or 'article'}.html \\\n"
+                f"  --market {market}\n"
+                f"# 3. Verify at: https://admin.shopify.com/store/giant-bubbles-by-tinka/admin/articles",
+                language="bash"
+            )
+
+    else:
+        st.success("🎉 All content ideas have been published or are being written!")
+
+    st.divider()
+
+    # ── Pipeline Status ───────────────────────────────────────────────────
+    st.subheader("📊 Pipeline Overview")
+
+    total_ideas = query_db("SELECT COUNT(*) as c FROM content_ideas")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM content_ideas").empty else 0
+    published_count = query_db("SELECT COUNT(*) as c FROM published_articles")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM published_articles").empty else 0
+    draft_count = query_db("SELECT COUNT(*) as c FROM published_articles WHERE status='draft'")["c"].iloc[0] if not query_db("SELECT COUNT(*) as c FROM published_articles WHERE status='draft'").empty else 0
+
+    col_ps1, col_ps2, col_ps3, col_ps4 = st.columns(4)
+    with col_ps1:
+        st.markdown(f'<div class="metric-card"><h3>{total_ideas}</h3><p>Total Content Ideas</p></div>', unsafe_allow_html=True)
+    with col_ps2:
+        st.markdown(f'<div class="metric-card"><h3>{published_count}</h3><p>Articles Written</p></div>', unsafe_allow_html=True)
+    with col_ps3:
+        st.markdown(f'<div class="metric-card"><h3>{total_ideas - published_count}</h3><p>Still to Write</p></div>', unsafe_allow_html=True)
+    with col_ps4:
+        pct = (published_count / total_ideas * 100) if total_ideas > 0 else 0
+        st.markdown(f'<div class="metric-card"><h3>{pct:.0f}%</h3><p>Pipeline Progress</p></div>', unsafe_allow_html=True)
+
+    st.caption(f"Articles on Shopify: {published_count} ({draft_count} as draft) | Dashboard: {PROJECT_DIR}")
+
+    # Quick link to Shopify admin
+    st.divider()
+    st.subheader("🔗 Quick Links")
+    st.markdown("""
+    [![Shopify Admin](https://img.shields.io/badge/Shopify-Admin-green)](https://admin.shopify.com/store/giant-bubbles-by-tinka/admin/articles)
+    [![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-blue)](https://github.com/Shahn23/tinka-seo-dashboard)
+    """)
+
+    st.markdown("""
+    **Need a new article written?** Ask me (the AI agent) to:
+    - Pick the highest-opportunity keyword from the Content tab
+    - Write a comprehensive SEO-optimized article
+    - Post it as a draft to your Shopify blog
+    - Record it in the dashboard
+    """)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 6: ALERTS (NEW)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab6:
     st.header("🔔 Alerts & Notifications")
     st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests — like MOZ Pro Alerts")
 
@@ -1161,9 +1345,9 @@ with tab5:
                                file_name="full_content_report.csv", mime="text/csv")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 6: SYNC & SETTINGS (ENHANCED with API integration framework)
+# TAB 7: SYNC & SETTINGS (ENHANCED with API integration framework)
 # ═════════════════════════════════════════════════════════════════════════════
-with tab6:
+with tab7:
     st.header("Sync, Settings & Integrations")
     st.caption("Data sync controls, API integration setup, and tool recommendations — like MOZ Pro Campaign Settings")
 

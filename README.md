@@ -1,6 +1,25 @@
 # Tinka SEO Dashboard
 
-Streamlit dashboard for Giant Bubbles by Tinka — tracks keyword rankings (107 keywords, 34 ranked), on-page SEO issues (47 open, 23 critical/high), and content ideas (62 topics) across **giantbubbles.co.nz** (43 keywords) and **giantbubblesau.com** (64 keywords).
+Streamlit dashboard for Giant Bubbles by Tinka — tracks keyword rankings (137 keywords, 34 ranked), on-page SEO issues (47 open, 23 critical/high), content ideas (74 topics), and **v0.4 Content Studio** for writing AI-powered SEO articles and publishing to Shopify as drafts.
+
+Live at: http://localhost:8510 (start with `start_dashboard.bat`)
+
+## v0.4 What's New — Content Studio 🚀
+
+- **Article Pipeline** — Pick a researched keyword, write an SEO article, post to Shopify as a draft in one command
+- **Content Studio tab** — Track published articles, see which ideas need writing, select topics by opportunity score
+- **First article live** — "The Ultimate Guide to Giant Bubbles" posted as Shopify draft (article ID 615913390401)
+- **article_writer.py** — CLI tool for posting articles; reads content ideas from DB, posts to Shopify, records in tracking table
+- **Shopify integration** — Auto-refreshed OAuth token (every 20h via cron), `write_content` scope for blog post management
+
+### Writing a New Article
+
+```bash
+# 1. Create the HTML article in articles/
+# 2. Post as draft to Shopify:
+python scripts/article_writer.py --idea <ID> --body articles/your-article.html --market NZ
+# 3. Review & publish from Shopify Admin → Blog Posts → Drafts
+```
 
 Live at: http://localhost:8510 (start with `start_dashboard.bat`)
 
