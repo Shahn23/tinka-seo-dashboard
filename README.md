@@ -45,12 +45,27 @@ python scripts/close_old_errors.py
 python scripts/check_state.py
 ```
 
-### Daily automated sync (GSC)
+### Daily automated sync (GSC + Rank Tracker)
+
 ```bash
 python scripts/daily_sync.py --live --days 1
 ```
 
-Runs daily at 6 AM via Hermes cron.
+This runs daily at **6 AM via Hermes cron** (`job 607bde89ba99`). It syncs GSC data, then generates a rank tracker report showing:
+- Keyword ranking changes (rising/falling/stable/new/lost over 7 days)
+- Average position by domain
+- Gap analysis (unranked high-opportunity keywords)
+
+### Rank Tracker
+
+```bash
+python scripts/rank_tracker.py                    # Full report
+python scripts/rank_tracker.py --json             # JSON output
+python scripts/rank_tracker.py --export-csv path  # Export to CSV
+python scripts/rank_tracker.py --status-only       # Quick summary
+```
+
+Outputs to `data/current_keyword_rankings.csv` — the full keyword status with positions and 7-day changes.
 
 ## Data Counts (as of June 2026)
 
