@@ -28,6 +28,20 @@ Or double-click `start_dashboard.bat` from the repo root.
 ### Manual refresh (from within dashboard)
 Click **GSC Live Refresh** in the Settings tab (tab 6) — syncs the latest 7 days of GSC data.
 
+### Re-ingest newest parent task data (30 new keywords + 12 blog topics)
+
+When the latest keyword research and blog topics arrive (new CSV + markdown drops into `data/`):
+
+```bash
+python scripts/ingest_newest_parent_data.py
+```
+
+This ingests:
+- **30 new keywords** from `data/new_keyword_ideas_v2.csv` into the keywords table
+- **Latest ranking positions** from `data/current_keyword_rankings.csv` into rank_history
+- **12 new blog topics** from `data/blog_post_topics_from_new_keywords_v2.md` into content_ideas
+- Plus 10 city template locations ready for content adaptation
+
 ### Re-ingest parent task data
 When new audit data lands (SEO audit, ranking CSV, keyword research):
 
@@ -71,12 +85,14 @@ Outputs to `data/current_keyword_rankings.csv` — the full keyword status with 
 
 | Metric | Value |
 |--------|-------|
-| Keywords tracked | 107 (43 NZ, 64 AU) |
+| Keywords tracked | 137 (43 NZ, 64 AU, 30 new from research) |
 | Keywords with rank data | 34 |
 | Average position | 5.6 |
 | Open SEO issues | 47 (17 critical, 14 high, 16 moderate) |
-| Content ideas | 62 |
+| Content ideas | 74 (62 original + 12 new blog post topics) |
+| Blog city templates | 10 cities ready for adaptation |
 | Rank history rows | 2,271 |
+| Combined est. search volume (new topics) | ~3,530/mo |
 
 ## Project Structure
 
@@ -98,17 +114,18 @@ tinka-seo-dashboard/
 │   ├── errors_au.json
 │   └── errors_nz.json
 ├── scripts/
-│   ├── ingest_parent_data.py     # v1 - original parent task data integration
-│   ├── ingest_parent_data_v2.py  # v2 - comprehensive audit + ranking data
-│   ├── fix_unmatched_rankings.py # Fuzzy-matches & adds missing keywords
-│   ├── close_old_errors.py       # Supersedes old manual error batches
-│   ├── check_state.py            # Quick DB state verifier
-│   ├── check_old_errors.py       # Debug: compare old vs new errors
-│   ├── daily_sync.py             # GSC orchestrator
-│   ├── sync_gsc.py               # GSC rankings sync
-│   ├── ingest_errors.py          # On-page error ingestion
-│   ├── ingest_content.py         # Content idea ingestion
-│   └── init_db.py                # Database initialization
+│   ├── ingest_parent_data.py           # v1 - original parent task data integration
+│   ├── ingest_parent_data_v2.py        # v2 - comprehensive audit + ranking data
+│   ├── ingest_newest_parent_data.py    # v3 - 30 new keywords + 12 blog topics + latest ranks
+│   ├── fix_unmatched_rankings.py       # Fuzzy-matches & adds missing keywords
+│   ├── close_old_errors.py             # Supersedes old manual error batches
+│   ├── check_state.py                  # Quick DB state verifier
+│   ├── check_old_errors.py             # Debug: compare old vs new errors
+│   ├── daily_sync.py                   # GSC + rank tracker orchestrator (runs daily 6am)
+│   ├── sync_gsc.py                     # GSC rankings sync
+│   ├── ingest_errors.py                # On-page error ingestion
+│   ├── ingest_content.py               # Content idea ingestion
+│   └── init_db.py                      # Database initialization
 ├── api/
 │   ├── index.py                  # FastAPI backend (Vercel-compatible)
 │   ├── seo_dashboard.db          # Seed DB for Vercel deploy

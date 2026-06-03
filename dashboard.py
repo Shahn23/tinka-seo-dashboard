@@ -866,8 +866,8 @@ with tab4:
     if effort_filter != "All":
         where3.append("ci.effort = ?")
         params3.append(effort_filter)
-    source_filter = st.selectbox("Source", ["All", "keyword-research (Blog Ideas)", "seed (original)", "manual"], key="source_t4")
-    src_map = {"keyword-research (Blog Ideas)": "keyword-research", "seed (original)": "seed", "manual": "manual"}
+    source_filter = st.selectbox("Source", ["All", "new-keyword-blog-topics", "keyword-research (Blog Ideas)", "seed (original)", "manual"], key="source_t4")
+    src_map = {"new-keyword-blog-topics": "new-keyword-blog-topics", "keyword-research (Blog Ideas)": "keyword-research", "seed (original)": "seed", "manual": "manual"}
     if source_filter != "All":
         where3.append("ci.source = ?")
         params3.append(src_map[source_filter])
