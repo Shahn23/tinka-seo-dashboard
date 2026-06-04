@@ -16,9 +16,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import requests
+import urllib.parse
 
 # ── Page config ──────────────────────────────────────────────────────────────
-st.set_page_config(page_title="SEO Dashboard v0.2", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="SEO Dashboard v0.5 — Rusty + GEO", layout="wide", initial_sidebar_state="expanded")
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(PROJECT_DIR, "data", "seo_dashboard.db")
@@ -40,6 +42,11 @@ st.markdown("""
     .alert-good { background: #1a2a1a; border-left: 4px solid #00d4aa; padding: 10px 15px; border-radius: 6px; margin: 8px 0; }
     .stTabs [data-baseweb="tab-list"] { gap: 4px; }
     .stTabs [data-baseweb="tab"] { border-radius: 6px 6px 0 0; padding: 8px 20px; }
+    .geo-card { background: linear-gradient(135deg, #0d2137, #1a3a5c); border: 1px solid #58a6ff; border-radius: 10px; padding: 14px; }
+    .pass-badge { display: inline-block; background: #00d4aa; color: #000; padding: 1px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .fail-badge { display: inline-block; background: #ff4444; color: #fff; padding: 1px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .warn-badge { display: inline-block; background: #ff8800; color: #fff; padding: 1px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .score-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin: 0 auto; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -104,7 +111,7 @@ def color_pos_change(val):
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 st.sidebar.title("🔍 SEO Dashboard")
 st.sidebar.markdown("**Giant Bubbles by Tinka**")
-st.sidebar.markdown("**v0.2** — MOZ/SemRush Level")
+st.sidebar.markdown("**v0.5** — Rusty SEO + AI GEO Features")
 
 # Domain filter
 domains_df = query_db("SELECT name, display_name FROM domains WHERE is_active=1")
@@ -174,11 +181,13 @@ tab_labels = [
     "🛠️ SEO Issues",
     "📝 Content",
     "✍️ Content Studio",
+    "🔍 Deep Audit",
+    "🌐 AI Visibility",
     "🔔 Alerts",
     "🔄 Settings",
 ]
 tabs = st.tabs(tab_labels)
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = tabs
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = tabs
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 1: KEYWORD RANKINGS (ENHANCED)
@@ -1163,14 +1172,421 @@ with tab5:
     **Need a new article written?** Ask me (the AI agent) to:
     - Pick the highest-opportunity keyword from the Content tab
     - Write a comprehensive SEO-optimized article
-    - Post it as a draft to your Shopify blog
     - Record it in the dashboard
     """)
 
+
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 6: ALERTS (NEW)
+# TAB 6: 🔍 DEEP SITE AUDIT (NEW v0.5 — RustySEO Inspired)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab6:
+    st.header("🔍 Deep Site Audit")
+    st.caption("Live page analysis — inspired by RustySEO's free website crawling toolkit. Checks meta tags, schema, page speed, images, and more.")
+
+    st.markdown("""
+    <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
+    <strong>🦀 RustySEO Integration:</strong> RustySEO is a free, open-source SEO/GEO desktop toolkit
+    (GUI app, <a href="https://github.com/mascanho/RustySEO" target="_blank" style="color:#58a6ff;">github.com/mascanho/RustySEO</a>)
+    for deep website crawling, log file analysis, AI-powered audits, and multi-format reporting.
+    <br><br>
+    <strong>💡 To get RustySEO:</strong> Download the installer from <strong>rustyseo.com</strong> (Windows/Mac/Linux).
+    It runs as a native desktop app — no crawl limits, no API costs. Configure GSC + PageSpeed + Gemini API keys for the full feature set.
+    <br><br>
+    <em>This tab provides a lightweight in-dashboard audit for quick checks. For hundreds of pages and log analysis, use the RustySEO desktop app.</em>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_url, col_btn = st.columns([3, 1])
+    with col_url:
+        audit_url = st.text_input("Enter a URL to audit",
+                                   placeholder="https://www.giantbubbles.co.nz/",
+                                   value="https://www.giantbubbles.co.nz/")
+    with col_btn:
+        run_audit = st.button("🔍 Run Deep Audit", type="primary", use_container_width=True)
+
+    if run_audit and audit_url:
+        with st.spinner(f"Auditing {audit_url}..."):
+            try:
+                # Normalize URL
+                url = audit_url.strip()
+                if not url.startswith("http"):
+                    url = "https://" + url
+
+                # HTTP request
+                resp = requests.get(url, timeout=15, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                })
+                html = resp.text
+                status_code = resp.status_code
+                content_type = resp.headers.get("Content-Type", "")
+                content_len = len(html)
+
+                import re
+
+                # Title
+                title_match = re.search(r'<title[^>]*>([^<]+)</title>', html, re.IGNORECASE)
+                title = title_match.group(1).strip() if title_match else ""
+                title_len = len(title)
+                title_ok = 30 <= title_len <= 60
+
+                # Meta description
+                meta_match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']', html, re.IGNORECASE)
+                meta_match2 = re.search(r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']description["\']', html, re.IGNORECASE)
+                meta_desc = meta_match.group(1).strip() if meta_match else (meta_match2.group(1).strip() if meta_match2 else "")
+                meta_len = len(meta_desc)
+                meta_ok = 120 <= meta_len <= 160
+
+                # H1
+                h1_match = re.findall(r'<h1[^>]*>([^<]+)</h1>', html, re.IGNORECASE)
+                h1_count = len(h1_match)
+                h1_ok = h1_count == 1
+                h1_text = h1_match[0].strip() if h1_match else ""
+
+                # Viewport
+                viewport_ok = bool(re.search(r'<meta[^>]+name=["\']viewport["\']', html, re.IGNORECASE))
+
+                # Canonical
+                canonical_match = re.search(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+                canonical_ok = bool(canonical_match)
+                canonical_url = canonical_match.group(1) if canonical_match else ""
+
+                # Image alt tags
+                img_tags = re.findall(r'<img[^>]+>', html, re.IGNORECASE)
+                total_imgs = len(img_tags)
+                imgs_with_alt = sum(1 for img in img_tags if re.search(r'alt=["\'][^"\']+["\']', img, re.IGNORECASE))
+                alt_ok = imgs_with_alt / max(total_imgs, 1) > 0.8
+
+                # Headings hierarchy
+                all_h = {}
+                for level in range(1, 7):
+                    all_h[f"h{level}"] = len(re.findall(f'<h{level}[^>]*>', html, re.IGNORECASE))
+                heading_ok = all_h["h1"] > 0 and all_h["h2"] > 0
+
+                # Schema / JSON-LD
+                schema_ok = bool(re.search(r'application/ld\+json', html, re.IGNORECASE) or
+                                 re.search(r'itemscope|itemtype=["\']https?://schema\.org', html, re.IGNORECASE))
+
+                # Open Graph
+                og_title = bool(re.search(r'<meta[^>]+property=["\']og:title["\']', html, re.IGNORECASE))
+                og_desc = bool(re.search(r'<meta[^>]+property=["\']og:description["\']', html, re.IGNORECASE))
+                og_image = bool(re.search(r'<meta[^>]+property=["\']og:image["\']', html, re.IGNORECASE))
+                og_ok = og_title and og_desc and og_image
+
+                # Compute score
+                checks = {
+                    "Title Tag (30-60 chars)": title_ok,
+                    "Meta Description (120-160 chars)": meta_ok,
+                    "Single H1 Tag": h1_ok,
+                    "Viewport Meta Tag": viewport_ok,
+                    "Canonical URL": canonical_ok,
+                    "Image Alt Text (80%+)": alt_ok,
+                    "Heading Hierarchy": heading_ok,
+                    "Structured Data (JSON-LD)": schema_ok,
+                    "Open Graph Tags": og_ok,
+                }
+                passed = sum(1 for v in checks.values() if v)
+                total = len(checks)
+                score = round((passed / total) * 100)
+
+                score_color = "#00d4aa" if score >= 80 else "#ff8800" if score >= 50 else "#ff4444"
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,#0d1117,#161b22);border:1px solid #30363d;border-radius:16px;padding:20px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div class="score-circle" style="background:conic-gradient({score_color} 0% {score}%, #1a1c2e {score}% 100%);color:{score_color};border:3px solid {score_color};">{score}</div>
+                            <div style="font-size:12px;color:#888;margin-top:6px;">On-Page Score</div>
+                        </div>
+                        <div style="flex:1;">
+                            <strong style="font-size:16px;color:#fff;">{url}</strong><br>
+                            <span style="color:#888;font-size:13px;">HTTP {status_code} · {content_type.split(';')[0]} · {content_len:,} bytes</span><br>
+                            <span style="color:#888;font-size:12px;">{passed}/{total} checks passed</span>
+                        </div>
+                        <div style="text-align:center;min-width:120px;">
+                            <span style="font-size:24px;font-weight:700;color:{score_color};">{'GREAT' if score >= 80 else 'NEEDS WORK' if score >= 50 else 'POOR'}</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.subheader("📋 Audit Checks")
+                for check_name, result in checks.items():
+                    badge = '<span class="pass-badge">PASS</span>' if result else '<span class="fail-badge">FAIL</span>'
+                    st.markdown(f"<div style='padding:4px 0;'>{badge} <strong>{check_name}</strong></div>", unsafe_allow_html=True)
+
+                st.divider()
+
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    st.subheader("📄 Page Elements")
+                    st.markdown(f"""
+                    - **Title:** `{title[:80]}{'...' if len(title) > 80 else ''}` ({title_len} chars)
+                    - **Meta Description:** `{meta_desc[:100]}{'...' if len(meta_desc) > 100 else ''}` ({meta_len} chars)
+                    - **H1:** `{h1_text[:80]}{'...' if len(h1_text) > 80 else ''}` ({h1_count} H1)
+                    - **Canonical URL:** `{canonical_url}` ({'✅' if canonical_ok else '❌ missing'})
+                    - **Schema/JSON-LD:** {'✅ Found' if schema_ok else '❌ Not found'}
+                    """)
+
+                with col_d2:
+                    st.subheader("🏷️ Meta & Social")
+                    st.markdown(f"""
+                    - **Viewport Tag:** {'✅ Set' if viewport_ok else '❌ Missing'}
+                    - **Open Graph:** {'✅ Complete (title + desc + image)' if og_ok else '⚠️ Incomplete'}
+                    - **Heading Structure:** H1:{all_h['h1']} H2:{all_h['h2']} H3:{all_h['h3']} ...
+                    - **Images:** {imgs_with_alt}/{total_imgs} with alt text
+                    - **HTTP Status:** {status_code}
+                    """)
+
+            except requests.exceptions.RequestException as e:
+                st.error(f"Could not reach {url}: {e}")
+            except Exception as e:
+                st.error(f"Audit error: {e}")
+
+    elif not run_audit:
+        st.info("Enter a URL above and click **Run Deep Audit** to check on-page SEO elements.")
+
+    st.divider()
+
+    # RustySEO download card
+    st.subheader("🦀 Get RustySEO Desktop App")
+    st.markdown("""
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:250px;background:#1a1c2e;border:1px solid #2a2d4a;border-radius:12px;padding:16px;">
+        <strong>RustySEO Features (Free, Open Source)</strong>
+        <ul style="color:#aaa;font-size:13px;margin-top:8px;padding-left:20px;">
+            <li>Deep website crawling (no limits)</li>
+            <li>Technical SEO audits & diagnostics</li>
+            <li>Nginx & Apache log file analysis</li>
+            <li>GSC + PageSpeed API integration</li>
+            <li>AI-powered analysis (Gemini/Ollama)</li>
+            <li>Multi-format reporting (CSV/Excel/PDF)</li>
+            <li>Built with Rust — blazing fast</li>
+        </ul>
+        <a href="https://github.com/mascanho/RustySEO/releases" target="_blank">Download RustySEO</a>
+    </div>
+    <div style="flex:1;min-width:250px;background:#1a1c2e;border:1px solid #2a2d4a;border-radius:12px;padding:16px;">
+        <strong>⚠️ Known Issues from Recent Audits</strong>
+        <ul style="color:#ff6b6b;font-size:13px;margin-top:8px;padding-left:20px;">
+            <li>About Us / Blog pages return 404 on both sites</li>
+            <li>Near-identical content across .co.nz and .com.au</li>
+            <li>Best Sellers page has Shopify placeholder content</li>
+            <li>AU contact page lists NZ phone number</li>
+            <li>Meta descriptions too long (294-320 chars vs ideal 120-160)</li>
+        </ul>
+    </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 7: 🌐 AI & GEO VISIBILITY (NEW v0.5 — BabyLoveGrowth Inspired)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab7:
+    st.header("🌐 AI & GEO Visibility")
+    st.caption("Generative Engine Optimization (GEO) — inspired by BabyLoveGrowth.ai's AI search visibility tracking")
+
+    st.markdown("""
+    <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
+    <strong>🌱 About BabyLoveGrowth.ai:</strong> AI-powered SEO/GEO platform that automates content creation,
+    builds backlinks through a 4,000+ site network, tracks AI visibility (Google + ChatGPT/Perplexity),
+    performs technical audits, and manages Reddit visibility workflows.
+    <br><br>
+    <strong>💡 Four-Pillar GEO Strategy:</strong><br>
+    1. <strong>Content Plan</strong> — Create articles for target audiences (→ Content Studio tab)<br>
+    2. <strong>Backlinks</strong> — Build authority through niche backlinks (→ Settings for Ahrefs/Moz API)<br>
+    3. <strong>Technical Audit</strong> — Fix issues blocking Google & AI search engines (→ SEO Issues tab)<br>
+    4. <strong>AI & Social Visibility</strong> — Track AI search presence & Reddit conversations (→ this tab)
+    </div>
+    """, unsafe_allow_html=True)
+
+    geo_subtabs = st.tabs(["🤖 AI Visibility Check", "🔍 Content Gap Analysis", "💬 Reddit & Social", "📈 Competition Radar"])
+
+    with geo_subtabs[0]:
+        st.subheader("🤖 AI Search Visibility Check")
+        st.caption("Check if your content appears in AI search engines. Enter a query to see related keyword GEO readiness.")
+
+        col_q, col_btn2 = st.columns([3, 1])
+        with col_q:
+            ai_query = st.text_input("Search query to test AI visibility",
+                                      placeholder="e.g. giant bubble kit nz", value="giant bubbles nz")
+        with col_btn2:
+            check_ai = st.button("🧠 Check AI Visibility", type="primary", use_container_width=True)
+
+        if check_ai and ai_query:
+            kw_ai_search = query_db("""
+                SELECT k.keyword, k.volume, k.opportunity_score, k.difficulty,
+                       rh.position, rh.clicks, rh.impressions
+                FROM keywords k
+                LEFT JOIN rank_history rh ON k.id = rh.keyword_id
+                    AND (rh.keyword_id, rh.date) IN (
+                        SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id
+                    )
+                WHERE k.keyword LIKE ? OR k.keyword LIKE ?
+                ORDER BY k.volume DESC LIMIT 10
+            """, [f"%{ai_query}%", f"%{ai_query.replace(' ', '%')}%"])
+
+            if not kw_ai_search.empty:
+                st.info(f"Found {len(kw_ai_search)} related keywords in your tracking database.")
+                for _, row in kw_ai_search.iterrows():
+                    pos = row["position"] if pd.notna(row["position"]) else None
+                    geo_readiness = "High" if pos and pos <= 10 else "Medium" if pos else "Low"
+                    geo_color = {"High": "#00d4aa", "Medium": "#ff8800", "Low": "#ff4444"}[geo_readiness]
+                    pos_display = f"#{pos:.0f}" if pos else "Not ranked"
+                    st.markdown(f"""
+                    <div style="background:#1a1c2e;border:1px solid #30363d;border-radius:8px;padding:10px;margin:6px 0;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <strong style="color:#fff;">{row['keyword']}</strong>
+                            <span style="font-size:11px;background:{geo_color};color:#000;padding:2px 8px;border-radius:4px;font-weight:600;">GEO: {geo_readiness}</span>
+                        </div>
+                        <span style="color:#888;font-size:12px;">Vol: {int(row['volume']) if pd.notna(row['volume']) else 'N/A'} | Google: {pos_display} | Opp: {row['opportunity_score']:.0f}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                st.divider()
+                st.subheader("📋 GEO Readiness Checklist")
+                for item, status, tip in [
+                    ("FAQ Schema", "✅ Present", "Add FAQPage structured data to FAQ sections"),
+                    ("Article Schema", "ℹ️ 1 article published", "Add Article schema to all blog posts"),
+                    ("Direct Answers", "⚠️ Improve", "Write direct answers to questions in first 100 words"),
+                    ("Authority Signals", "⏳ Needed", "Build niche-relevant backlinks"),
+                    ("Structured Lists", "⚠️ Add more", "Use lists/tables to make content AI-friendly"),
+                ]:
+                    st.markdown(f"**{item}** — {status}  \n💡 {tip}")
+            else:
+                st.info(f"No keyword data found for '{ai_query}'.")
+        elif not check_ai:
+            st.info("Enter a query and click **Check AI Visibility**.")
+
+    with geo_subtabs[1]:
+        st.subheader("🔍 Content Gap Analysis")
+        st.caption("High-demand topics not yet ranking — your best targets for new content")
+
+        gap_content = query_db("""
+            SELECT ci.id, ci.title, ci.target_keyword, ci.category, ci.estimated_searches,
+                   ci.opportunity_score, ci.effort
+            FROM content_ideas ci
+            LEFT JOIN v_backlog_with_rankings vw ON ci.id = vw.idea_id
+            WHERE (vw.current_position IS NULL OR vw.current_position > 20) AND ci.status != 'published'
+            ORDER BY ci.opportunity_score DESC LIMIT 20
+        """)
+        gap_keywords = query_db("""
+            SELECT k.keyword, k.category, k.volume, k.opportunity_score, k.difficulty, d.name AS domain
+            FROM keywords k JOIN domains d ON k.domain_id = d.id
+            LEFT JOIN rank_history rh ON k.id = rh.keyword_id
+            WHERE rh.id IS NULL AND k.opportunity_score >= 6.0
+            ORDER BY k.volume DESC LIMIT 20
+        """)
+
+        col_gap1, col_gap2 = st.columns(2)
+        with col_gap1:
+            st.subheader("📝 Untapped Content Ideas")
+            if not gap_content.empty:
+                for _, row in gap_content.head(8).iterrows():
+                    st.markdown(f"**{row['title'][:55]}**  \n🎯 {row['target_keyword']} · 📈 {int(row['estimated_searches']) if pd.notna(row['estimated_searches']) else 0}/mo · ⭐ {row['opportunity_score']:.0f}")
+            else:
+                st.info("No content gaps found.")
+        with col_gap2:
+            st.subheader("🆕 Unranked High-Opportunity Keywords")
+            if not gap_keywords.empty:
+                for _, row in gap_keywords.head(8).iterrows():
+                    st.markdown(f"**{row['keyword']}**  \n{row['domain']} · Vol: {int(row['volume']) if pd.notna(row['volume']) else 0}/mo · Opp: {row['opportunity_score']:.0f}")
+            else:
+                st.info("All high-opportunity keywords have rank data.")
+
+        col_gap_m1, col_gap_m2, col_gap_m3, col_gap_m4 = st.columns(4)
+        with col_gap_m1:
+            st.metric("Content Gaps", len(gap_content) if not gap_content.empty else 0)
+        with col_gap_m2:
+            total_gap_vol = int(gap_content["estimated_searches"].sum()) if not gap_content.empty else 0
+            st.metric("Gap Volume/mo", f"{total_gap_vol:,}")
+        with col_gap_m3:
+            st.metric("Unranked KWs", len(gap_keywords) if not gap_keywords.empty else 0)
+        with col_gap_m4:
+            total_kw_vol = int(gap_keywords["volume"].sum()) if not gap_keywords.empty else 0
+            st.metric("Untapped Volume", f"{total_kw_vol:,}")
+
+    with geo_subtabs[2]:
+        st.subheader("💬 Reddit & Social Visibility")
+        st.caption("Track brand mentions and conversation opportunities — inspired by BabyLoveGrowth's Reddit AI agent")
+
+        st.info("Reddit posts now rank in Google's top 10 for many queries. Being visible in relevant threads builds brand awareness and signals authority to AI search engines.")
+
+        col_rd, col_rb = st.columns([3, 1])
+        with col_rd:
+            reddit_query = st.text_input("Search Reddit for brand opportunities",
+                                          placeholder="e.g. giant bubbles kids party auckland",
+                                          value="giant bubbles nz")
+        with col_rb:
+            search_reddit = st.button("🔍 Search Reddit", type="primary", use_container_width=True)
+
+        if search_reddit and reddit_query:
+            with st.spinner(f"Searching Reddit for '{reddit_query}'..."):
+                try:
+                    search_url = f"https://www.google.com/search?q=site:reddit.com+{urllib.parse.quote(reddit_query)}+nz&num=10"
+                    r = requests.get(search_url, timeout=10,
+                                     headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+                    if r.status_code == 200:
+                        urls_found = list(set(re.findall(r'https?://(?:www\.)?reddit\.com/r/[^"&\s<>]+', r.text)))[:8]
+                        if urls_found:
+                            st.success(f"Found {len(urls_found)} relevant Reddit threads!")
+                            for reddit_url in urls_found:
+                                sub = re.search(r'/r/([^/]+)', reddit_url)
+                                sub_name = sub.group(1) if sub else "unknown"
+                                st.markdown(f"[r/{sub_name} — Opportunity]({reddit_url})")
+                        else:
+                            st.info("No Reddit results found.")
+                    else:
+                        st.warning(f"Search returned status {r.status_code}. Try again later.")
+                except Exception as e:
+                    st.warning(f"Search error: {e}")
+
+    with geo_subtabs[3]:
+        st.subheader("📈 Competition Radar")
+        st.caption("Track competitive landscape — which keywords you dominate and where competitors are winning")
+
+        col_cr1, col_cr2 = st.columns(2)
+        with col_cr1:
+            st.subheader("🏆 Top Performing Keywords (Top 5)")
+            top_perf = query_db("""
+                SELECT k.keyword, d.name AS domain, rh.position, rh.clicks
+                FROM rank_history rh JOIN keywords k ON rh.keyword_id = k.id
+                JOIN domains d ON k.domain_id = d.id
+                WHERE (rh.keyword_id, rh.date) IN (SELECT keyword_id, MAX(date) FROM rank_history GROUP BY keyword_id)
+                AND rh.position <= 5 ORDER BY rh.position ASC LIMIT 8
+            """)
+            if not top_perf.empty:
+                for _, row in top_perf.iterrows():
+                    st.markdown(f"**#{row['position']:.0f}** {row['keyword']} · {row['domain']} · {int(row['clicks']) if pd.notna(row['clicks']) else 0} clicks")
+            else:
+                st.caption("No data available.")
+
+        with col_cr2:
+            st.subheader("💪 Strengthening Positions (30d)")
+            risers = query_db("""
+                SELECT k.keyword, d.name AS domain, latest.position AS current_pos,
+                       prev.position AS prev_pos, (prev.position - latest.position) AS improvement
+                FROM keywords k JOIN domains d ON k.domain_id = d.id
+                JOIN rank_history latest ON k.id = latest.keyword_id AND latest.date = (SELECT MAX(date) FROM rank_history WHERE keyword_id = k.id)
+                JOIN rank_history prev ON k.id = prev.keyword_id AND prev.date = date('now', '-30 days')
+                WHERE prev.position IS NOT NULL AND latest.position IS NOT NULL AND (prev.position - latest.position) > 1
+                ORDER BY improvement DESC LIMIT 6
+            """)
+            if not risers.empty:
+                for _, row in risers.iterrows():
+                    st.markdown(f"↑ **{int(row['improvement'])} spots** {row['keyword']} · #{row['prev_pos']:.0f}→#{row['current_pos']:.0f}")
+            else:
+                st.caption("No gains detected.")
+
+        st.divider()
+        st.subheader("🎯 Identified Competitors")
+        st.markdown("**Direct:** Felt.co.nz (Bubbleon) · SmartyPants/WOWmazing · Amazon AU · Kmart AU  \n"
+                    "**Services:** Bubble Shows NZ · An Enchanted Party · Party Makers NZ · Kia Ora Party  \n"
+                    "**Content:** Outdoor toy blogs · Party planning websites · NZ parenting blogs")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 8: ALERTS (Migrated to slot 8)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab8:
     st.header("🔔 Alerts & Notifications")
     st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests — like MOZ Pro Alerts")
 
@@ -1345,9 +1761,9 @@ with tab6:
                                file_name="full_content_report.csv", mime="text/csv")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 7: SYNC & SETTINGS (ENHANCED with API integration framework)
+# TAB 9: SYNC & SETTINGS (Migrated to slot 9)
 # ═════════════════════════════════════════════════════════════════════════════
-with tab7:
+with tab9:
     st.header("Sync, Settings & Integrations")
     st.caption("Data sync controls, API integration setup, and tool recommendations — like MOZ Pro Campaign Settings")
 
@@ -1495,9 +1911,10 @@ with tab7:
     | **Google Ads API** | Free | Real search volume, competition, bid data | ⭐ P0 |
     | **Google Analytics 4** | Free | Traffic source correlation with rankings | ⭐ P0 |
     | **Ahrefs API** | $99/mo | Backlink profiles, content gap, competitor analysis | ⭐ P1 |
+    | **RustySEO** | Free | Deep crawling, log analysis, AI audits — desktop app | ⭐ P1 |
     | **Moz API** | $49/mo | Domain Authority, Spam Score | P2 |
-    | **Screaming Frog** | Free/£149yr | On-page crawl with deeper analysis than GSC | P2 |
-    | **ChatGPT/GPT** | $20/mo | Content outline generation, meta description optimization | P2 |
+    | **DataForSEO API** | Pay/use | Live SERP data, rank tracking, backlinks | P2 |
+    | **BabyLoveGrowth.ai** | Paid | Full GEO automation, AI visibility, Reddit agent | P2 |
     """)
 
     st.caption(f"Dashboard path: {PROJECT_DIR} | Database: {DB_PATH} | Rows: ~2,250 rank history")
