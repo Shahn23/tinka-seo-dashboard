@@ -89,8 +89,12 @@ def render_page(**ctx):
 
     kw_sec = render_keywords(ctx)
     newkw_sec = render_new_keywords(ctx)
+    comp_sec = render_competitive(ctx)
     issues_sec = render_issues(ctx)
     content_sec = render_content(ctx)
+    studio_sec = render_content_studio(ctx)
+    audit_sec = render_deep_audit(ctx)
+    geo_sec = render_geo_visibility(ctx)
     settings_sec = render_settings(ctx)
 
     return f"""<!DOCTYPE html>
@@ -173,6 +177,7 @@ h3{{font-size:15px;margin-bottom:12px;color:#ddd}}
 .loss-card .kw{{color:#ff6b6b;font-weight:600}}
 .loss-card .meta{{color:#aaa;font-size:12px}}
 .wl-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}}
+.keyword-tag{{display:inline-block;background:#1e2036;border:1px solid #2a2d4a;border-radius:12px;padding:2px 10px;font-size:11px;color:#ccc;margin:2px}}
 @media(max-width:768px){{.app-layout{{flex-direction:column}}.sidebar{{width:100%;border-right:none;border-bottom:1px solid #2a2d4a}}.grid-2,.wl-grid{{grid-template-columns:1fr}}}}
 </style>
 </head>
@@ -193,14 +198,22 @@ h3{{font-size:15px;margin-bottom:12px;color:#ddd}}
 <div class="tabs">
 <button class="tab-btn active" onclick="switchTab(event,'tab-kw')">🔑 Rankings</button>
 <button class="tab-btn" onclick="switchTab(event,'tab-newkw')">🆕 New Keywords</button>
+<button class="tab-btn" onclick="switchTab(event,'tab-comp')">📊 Competitive</button>
 <button class="tab-btn" onclick="switchTab(event,'tab-issues')">🛠️ Issues ({ctx.get('open_issue_count','?')})</button>
 <button class="tab-btn" onclick="switchTab(event,'tab-content')">📝 Content ({ctx.get('idea_count','?')})</button>
+<button class="tab-btn" onclick="switchTab(event,'tab-studio')">✍️ Content Studio</button>
+<button class="tab-btn" onclick="switchTab(event,'tab-audit')">🔍 Deep Audit</button>
+<button class="tab-btn" onclick="switchTab(event,'tab-geo')">🌐 AI Visibility</button>
 <button class="tab-btn" onclick="switchTab(event,'tab-settings')">🔄 Settings</button>
 </div>
 <div id="tab-kw" class="tab-content active">{kw_sec}</div>
 <div id="tab-newkw" class="tab-content">{newkw_sec}</div>
+<div id="tab-comp" class="tab-content">{comp_sec}</div>
 <div id="tab-issues" class="tab-content">{issues_sec}</div>
 <div id="tab-content" class="tab-content">{content_sec}</div>
+<div id="tab-studio" class="tab-content">{studio_sec}</div>
+<div id="tab-audit" class="tab-content">{audit_sec}</div>
+<div id="tab-geo" class="tab-content">{geo_sec}</div>
 <div id="tab-settings" class="tab-content">{settings_sec}</div>
 </div></div>
 <script>
@@ -418,6 +431,156 @@ def render_content(ctx):
 
     return "".join(parts)
 
+# ── TAB 5: Competitive Analysis ──────────────────────────────────────────────
+def render_competitive(ctx):
+    rows = ctx.get("comp_rows", [])
+    gap_rows = ctx.get("gap_rows", [])
+    parts = ['<h2>📊 Competitive Keyword Analysis</h2>']
+
+    # Cross-site keyword overlap
+    if rows:
+        parts.append('''<h3>🌐 Keyword Coverage by Domain</h3>
+<div style="overflow-x:auto"><table class="data-table">
+<thead><tr><th>Keyword</th><th>giantbubbles.co.nz</th><th>giantbubblesau.com</th><th>Volume</th><th>Category</th></tr></thead><tbody>''')
+        for r in rows:
+            nz = "✅" if r["nz_rank"] else ("🟡" if r["nz_kw"] else "❌")
+            au = "✅" if r["au_rank"] else ("🟡" if r["au_kw"] else "❌")
+            parts.append(f'<tr><td style="font-weight:600">{esc(r["keyword"])}</td><td>{nz}</td><td>{au}</td><td>{r.get("volume",0):,}</td><td>{esc(r.get("category",""))}</td></tr>')
+        parts.append('</tbody></table></div>')
+
+        # Summary cards
+        shared = sum(1 for r in rows if r["nz_kw"] and r["au_kw"])
+        nz_only = sum(1 for r in rows if r["nz_kw"] and not r["au_kw"])
+        au_only = sum(1 for r in rows if r["au_kw"] and not r["nz_kw"])
+        parts.append(f'''<div class="metric-row">
+<div class="metric-card"><div class="value" style="color:#4ecdc4">{shared}</div><div class="label">Keywords on Both Sites</div></div>
+<div class="metric-card"><div class="value" style="color:#00d4aa">{nz_only}</div><div class="label">NZ Only</div></div>
+<div class="metric-card"><div class="value" style="color:#ff6b6b">{au_only}</div><div class="label">AU Only</div></div>
+</div>''')
+    else:
+        parts.append('<p style="color:#888">No keyword data for competitive analysis.</p>')
+
+    # Keyword gap analysis (keywords tracked in one domain but not the other)
+    if gap_rows:
+        parts.append('<h3>🔍 Keyword Gaps</h3><p style="color:#888;font-size:13px;margin-bottom:12px">Keywords where one site has ranking data and the other does not — a content opportunity for the missing domain.</p>')
+        parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Keyword</th><th>Has Data On</th><th>Missing On</th><th>Vol</th><th>NZ Rank</th><th>AU Rank</th></tr></thead><tbody>')
+        for r in gap_rows:
+            has_domain, miss_domain = ("NZ", "AU") if r.get("nz_pos") else ("AU", "NZ")
+            parts.append(f'<tr><td style="font-weight:600">{esc(r["keyword"])}</td><td style="color:#00d4aa">{has_domain}</td><td style="color:#ff6b6b">{miss_domain}</td><td>{r.get("volume",0):,}</td><td>{r.get("nz_rank","-")}</td><td>{r.get("au_rank","-")}</td></tr>')
+        parts.append('</tbody></table></div>')
+
+    return "".join(parts)
+
+# ── TAB 6: Content Studio ──────────────────────────────────────────────────
+def render_content_studio(ctx):
+    articles = ctx.get("articles", [])
+    parts = ['<h2>✍️ Content Studio</h2>']
+
+    if articles:
+        parts.append(f'''<div class="metric-row">
+<div class="metric-card"><div class="value">{len(articles)}</div><div class="label">Articles Published</div></div>
+<div class="metric-card"><div class="value">{sum(si(a.get("word_count",0)) for a in articles):,}</div><div class="label">Total Words Written</div></div>
+<div class="metric-card ok"><div class="value">{sum(1 for a in articles if a.get("status")=="published")}</div><div class="label">Published</div></div>
+<div class="metric-card warn"><div class="value">{sum(1 for a in articles if a.get("status")=="draft")}</div><div class="label">Drafts</div></div>
+</div>''')
+
+        parts.append('<h3>📄 Published Articles</h3>')
+        parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Title</th><th>Domain</th><th>Status</th><th>Words</th><th>SEO Score</th><th>Created</th></tr></thead><tbody>')
+        for a in articles:
+            link = esc(a.get("shopify_url","") or a.get("article_url",""))
+            title = esc(a.get("title",""))
+            status_icon = "✅" if a.get("status")=="published" else "📝"
+            domain = esc(a.get("target_domain",""))
+            words = a.get("word_count",0) or 0
+            seo = a.get("seo_score","") or "-"
+            created = esc(a.get("created_at","") or "")
+            parts.append(f'<tr><td style="font-weight:600">{title}</td><td>{domain}</td><td>{status_icon} {esc(a.get("status",""))}</td><td>{words:,}</td><td>{seo}</td><td>{created[:10] if created else ""}</td></tr>')
+        parts.append('</tbody></table></div>')
+
+        if any(a.get("target_keywords") for a in articles):
+            parts.append('<h3>🎯 Keywords Used in Articles</h3><div class="grid-2">')
+            for a in articles:
+                kws = a.get("target_keywords","")
+                if kws:
+                    kw_list = [k.strip() for k in kws.split(",")]
+                    kw_tags = " ".join(f'<span class="keyword-tag">{esc(k)}</span>' for k in kw_list[:5])
+                    parts.append(f'<div class="status-box"><div style="font-weight:600;margin-bottom:6px">{esc(a["title"])}</div>{kw_tags}</div>')
+            parts.append('</div>')
+    else:
+        parts.append('<p style="color:#888">No articles published yet. Use the Content Studio in the Streamlit dashboard (local) to write and publish articles from keyword ideas.</p>')
+
+    return "".join(parts)
+
+# ── TAB 7: Deep Audit ──────────────────────────────────────────────────────
+def render_deep_audit(ctx):
+    findings = ctx.get("audit_findings", [])
+    audit_metrics = ctx.get("audit_metrics", {})
+    parts = ['<h2>🔍 Deep Site Audit</h2>']
+
+    if audit_metrics:
+        parts.append(f'''<div class="metric-row">
+<div class="metric-card danger"><div class="value">{audit_metrics.get("critical",0)}</div><div class="label">Critical</div></div>
+<div class="metric-card warn"><div class="value">{audit_metrics.get("high",0)}</div><div class="label">High</div></div>
+<div class="metric-card"><div class="value">{audit_metrics.get("moderate",0)}</div><div class="label">Moderate</div></div>
+<div class="metric-card ok"><div class="value">{audit_metrics.get("low",0)}</div><div class="label">Low</div></div>
+<div class="metric-card ok"><div class="value">{audit_metrics.get("fixed",0)}</div><div class="label">Fixed</div></div>
+</div>''')
+
+    if findings:
+        parts.append('<p style="color:#888;font-size:13px;margin-bottom:16px">On-page SEO audit findings from latest crawl. These are technical issues found on your sites.</p>')
+        # Group by severity
+        for sev_name, sev_color in [("critical", "#ff4444"), ("high", "#ff8800"), ("moderate", "#ffcc00"), ("low", "#888")]:
+            sev_items = [f for f in findings if f.get("severity") == sev_name and f.get("status") != "fixed"]
+            if sev_items:
+                parts.append(f'<h3 style="color:{sev_color};margin-top:16px;margin-bottom:8px">🔴 {sev_name.title()} ({len(sev_items)})</h3>')
+                for f in sev_items:
+                    parts.append(f'''<div class="issue-detail {sev_name}">
+<div><span class="sev-badge sev-{sev_name}">{sev_name}</span><strong style="margin-left:8px">{esc(f.get("error_type","").replace("_"," ").title())}</strong></div>
+<div class="meta">{esc(f.get("domain",""))} | {esc(f.get("page_url",""))[:80]}</div>
+<div class="desc">{esc(f.get("description",""))}</div>
+<div class="suggestion">💡 {esc(f.get("suggestion",""))}</div>
+</div>''')
+    else:
+        parts.append('<p style="color:#888">No audit findings available. Run a site crawl to generate findings.</p>')
+
+    return "".join(parts)
+
+# ── TAB 8: AI & GEO Visibility ─────────────────────────────────────────────
+def render_geo_visibility(ctx):
+    geo_rows = ctx.get("geo_rows", [])
+    geo_metrics = ctx.get("geo_metrics", {})
+    parts = ['<h2>🌐 AI & GEO Visibility</h2>']
+
+    if geo_rows:
+        # Rank trend over time
+        dates = sorted(set(r["date"] for r in geo_rows if r.get("date")))
+        parts.append('<h3>📊 GSC Performance Trend</h3>')
+        parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Domain</th><th>Avg Position</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead><tbody>')
+        for r in sorted(geo_rows, key=lambda x: x.get("date","") or "", reverse=True)[:30]:
+            ctr = f'{r.get("ctr",0):.1f}%' if r.get("ctr") else "-"
+            parts.append(f'<tr><td>{esc(r.get("date",""))}</td><td>{esc(r.get("domain",""))}</td><td>{r.get("avg_position",0):.1f}</td><td>{r.get("clicks",0):,}</td><td>{r.get("impressions",0):,}</td><td>{ctr}</td></tr>')
+        parts.append('</tbody></table></div>')
+    else:
+        parts.append('<p style="color:#888">No GSC performance trend data available. Data syncs daily at 6 AM.</p>')
+
+    # GEO recommendations
+    parts.append('''<h3 style="margin-top:20px">🤖 AI Search Optimization Tips</h3>
+<div class="status-box">
+<ol style="color:#aaa;font-size:13px;line-height:2;margin-left:20px">
+<li><strong>Improve Structured Data</strong> - Add FAQ, HowTo, and Product schema markup to help AI assistants understand your content.</li>
+<li><strong>Build Authoritative Content</strong> - Publish in-depth guides (1,500+ words) that answer specific questions AI users search for.</li>
+<li><strong>Optimize for Featured Snippets</strong> - Structure content with clear headings, lists, and tables that AI parsers extract easily.</li>
+<li><strong>Increase Internal Linking</strong> - Strengthen topical clusters so AI crawlers understand site structure and relevance.</li>
+<li><strong>Monitor Brand Mentions</strong> - AI models often cite well-known brands; build authority through PR and guest posting.</li>
+</ol>
+<div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff;border-radius:10px">
+<p style="color:#58a6ff;font-weight:600">💡 GEO Insight</p>
+<p style="color:#aaa;font-size:13px">Generative Engine Optimization (GEO) focuses on being cited by AI search engines like ChatGPT, Claude, and Perplexity. Traditional SEO still matters, but GEO adds a new layer: content that's structured for AI consumption.</p>
+</div>
+</div>''')
+
+    return "".join(parts)
+
 # ── TAB 5: Sync & Settings ──────────────────────────────────────────────────
 def render_settings(ctx):
     last_sync = ctx.get("last_sync")
@@ -439,7 +602,7 @@ def render_settings(ctx):
     parts.append('</div><h3>📁 Dashboard Info</h3><div class="status-box">')
     parts.append('<p>📍 <strong>App:</strong> tinka-seo-dashboard.vercel.app</p>')
     parts.append('<p>🗄️ <strong>Data:</strong> SQLite, auto-refreshes every 60s</p>')
-    parts.append(f'<p>🏷️ <strong>Version:</strong> v0.5 - Live Syncing</p>')
+    parts.append(f'<p>🏷️ <strong>Version:</strong> v0.7 - Full 9-Tab Dashboard</p>')
     parts.append('</div></div></div>')
 
     if sync_hist:
@@ -455,8 +618,13 @@ def render_settings(ctx):
 <ol style="color:#aaa;font-size:13px;line-height:1.8;margin-left:20px">
 <li>🔑 <strong>Rankings tab</strong> - See where your keywords rank (Top 3, Top 10, etc.). Use the filter sidebar to view NZ or AU data separately. Select any keyword to see its position trend over time.</li>
 <li>🆕 <strong>New Keywords tab</strong> - Research-backed keywords you're not ranking for yet. High score = write content about these first.</li>
+<li>📊 <strong>Competitive tab</strong> - See which keywords are covered on NZ vs AU, and identify gaps where one site has data the other doesn't.</li>
 <li>🛠️ <strong>Issues tab</strong> - Technical problems found on your sites. Critical items hurt rankings - fix first.</li>
 <li>📝 <strong>Content tab</strong> - Blog post ideas ranked by opportunity score. Easy topics are quick wins.</li>
+<li>✍️ <strong>Content Studio tab</strong> - Track published articles and which keywords they target.</li>
+<li>🔍 <strong>Deep Audit tab</strong> - Full on-page audit findings grouped by severity.</li>
+<li>🌐 <strong>AI Visibility tab</strong> - GSC performance trends and GEO optimization tips for AI search engines.</li>
+<li>🔄 <strong>Settings tab</strong> - Data sync status, configuration, and this guide.</li>
 <li>The dashboard <strong>auto-refreshes every 60 seconds</strong> to show the latest data.</li>
 </ol>
 <p style="margin-top:12px;color:#888;font-size:12px">For technical updates, run <code>scripts/daily_sync.py --live --days 1</code> from the dashboard project directory, or rely on the daily 6 AM cron job.</p>
@@ -757,6 +925,62 @@ async def dashboard(
                           "Score": round(sf(r["opportunity_score"]), 1),
                           "Effort": r["effort"], "Type": r["content_type"]} for r in ideas_rows]
 
+    # ═══ COMPETITIVE ANALYSIS ═════════════════════════════════════════════
+    comp_rows = fetch(
+        """SELECT k.keyword, k.volume, k.category,
+                  MAX(CASE WHEN d.name='giantbubbles.co.nz' THEN 1 ELSE 0 END) AS nz_kw,
+                  MAX(CASE WHEN d.name='giantbubblesau.com' THEN 1 ELSE 0 END) AS au_kw,
+                  MAX(CASE WHEN d.name='giantbubbles.co.nz' AND rh.position IS NOT NULL THEN 1 ELSE 0 END) AS nz_rank,
+                  MAX(CASE WHEN d.name='giantbubblesau.com' AND rh.position IS NOT NULL THEN 1 ELSE 0 END) AS au_rank
+           FROM keywords k JOIN domains d ON k.domain_id = d.id
+           LEFT JOIN (SELECT keyword_id, MAX(date) as max_d FROM rank_history GROUP BY keyword_id) rh_max ON k.id = rh_max.keyword_id
+           LEFT JOIN rank_history rh ON k.id = rh.keyword_id AND rh.date = rh_max.max_d
+           GROUP BY k.keyword
+           ORDER BY k.volume DESC"""
+    )
+    gap_rows = [r for r in comp_rows if (r["nz_rank"] or r["nz_kw"]) and not (r["au_rank"] or r["au_kw"]) or (r["au_rank"] or r["au_kw"]) and not (r["nz_rank"] or r["nz_kw"])]
+    gap_rows = [dict(r) for r in gap_rows]
+
+    # Enrich gap rows with rank data
+    gap_enriched = []
+    for r in gap_rows:
+        kw = r["keyword"]
+        nz_r = fetch("SELECT position FROM rank_history rh JOIN keywords k ON rh.keyword_id=k.id JOIN domains d ON k.domain_id=d.id WHERE k.keyword=? AND d.name='giantbubbles.co.nz' ORDER BY rh.date DESC LIMIT 1", [kw])
+        au_r = fetch("SELECT position FROM rank_history rh JOIN keywords k ON rh.keyword_id=k.id JOIN domains d ON k.domain_id=d.id WHERE k.keyword=? AND d.name='giantbubblesau.com' ORDER BY rh.date DESC LIMIT 1", [kw])
+        r["nz_pos"] = str(nz_r[0]["position"]) if nz_r else None
+        r["au_pos"] = str(au_r[0]["position"]) if au_r else None
+        gap_enriched.append(r)
+
+    # ═══ CONTENT STUDIO ══════════════════════════════════════════════════
+    articles = fetch("""SELECT pa.id, pa.title, pa.target_domain, pa.status, pa.target_keywords,
+                               pa.word_count, pa.seo_score, pa.shopify_url, pa.created_at, pa.published_at
+                        FROM published_articles pa ORDER BY pa.created_at DESC""")
+
+    # ═══ DEEP AUDIT ═══════════════════════════════════════════════════════
+    audit_findings = fetch(
+        """SELECT e.id, d.name AS domain, e.error_type, e.severity, e.page_url,
+                  e.description, e.suggestion, e.status, e.created_at, e.fixed_at
+           FROM onpage_errors e JOIN domains d ON e.domain_id = d.id
+           ORDER BY CASE e.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1
+                        WHEN 'moderate' THEN 2 ELSE 3 END, e.id"""
+    )
+    audit_open = [f for f in audit_findings if f["status"] == "open"]
+    audit_metrics = {
+        "critical": len([f for f in audit_open if f["severity"]=="critical"]),
+        "high": len([f for f in audit_open if f["severity"]=="high"]),
+        "moderate": len([f for f in audit_open if f["severity"]=="moderate"]),
+        "low": len([f for f in audit_open if f["severity"]=="low"]),
+        "fixed": len([f for f in audit_findings if f["status"]=="fixed"]),
+    }
+
+    # ═══ AI & GEO VISIBILITY ════════════════════════════════════════════
+    geo_rows = fetch(
+        """SELECT k.keyword, d.name AS domain, rh.date, rh.position, rh.clicks, rh.impressions, rh.ctr
+           FROM rank_history rh JOIN keywords k ON rh.keyword_id = k.id
+           JOIN domains d ON k.domain_id = d.id
+           ORDER BY rh.date DESC LIMIT 100"""
+    )
+
     # ═══ SYNC INFO ══════════════════════════════════════════════════════
     last_sync = get_one(
         """SELECT source, status, rows_synced, started_at, completed_at, error
@@ -786,6 +1010,10 @@ async def dashboard(
         issue_rows=issue_rows, issues_metrics=issues_metrics, issues_charts=issues_charts,
         ideas_rows=ideas_rows, ideas_metrics=ideas_metrics, ideas_charts=ideas_charts,
         top_picks=top_picks, ideas_display=ideas_display,
+        comp_rows=comp_rows, gap_rows=gap_enriched,
+        articles=articles,
+        audit_findings=audit_findings, audit_metrics=audit_metrics,
+        geo_rows=geo_rows, geo_metrics={},
         last_sync=last_sync, sync_hist=sync_hist,
     )
     return HTMLResponse(html)
