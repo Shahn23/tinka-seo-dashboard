@@ -1,4 +1,4 @@
-"""GSC Sync — Fetch Google Search Console data and store in SQLite.
+"""GSC Sync - Fetch Google Search Console data and store in SQLite.
 Usage: python scripts/sync_gsc.py --live --days 7
        python scripts/sync_gsc.py --test
 """
@@ -59,7 +59,7 @@ def run_sync(live=False, days=7, test=False, dry_run=False, force=False):
             sites = service.sites().list().execute()
             for site in sites.get("siteEntry", []):
                 log.info(f"  Site: {site['siteUrl']} (permission: {site['permissionLevel']})")
-            log.info(f"Connection OK — {len(sites.get('siteEntry',[]))} site(s) found")
+            log.info(f"Connection OK - {len(sites.get('siteEntry',[]))} site(s) found")
         except Exception as e:
             log.error(f"Test failed: {e}")
         conn.close()
@@ -131,7 +131,7 @@ def run_sync(live=False, days=7, test=False, dry_run=False, force=False):
                     total_rows += domain_rows
                     log.info(f"  {date}: {domain_rows} rows")
                 except Exception as e:
-                    err = f"  {date}: {site_url} — {e}"
+                    err = f"  {date}: {site_url} - {e}"
                     log.warning(err)
                     errors.append(err)
 

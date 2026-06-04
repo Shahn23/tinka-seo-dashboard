@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fix unmatched keyword rankings — adds missing keywords and fixes name mismatches.
+"""Fix unmatched keyword rankings - adds missing keywords and fixes name mismatches.
 
 Skipped NZ keywords need adding to keywords table:
   - 'Giant Bubbles For Kids NZ' (vol=170)
-  - 'How To Make Giant Bubbles' (vol=720) — exists as AU, needs NZ copy
+  - 'How To Make Giant Bubbles' (vol=720) - exists as AU, needs NZ copy
   - 'Best Giant Bubble Kit' (vol=210)
   - 'Giant Bubbles Party Hire Auckland' (vol=90)
 
@@ -105,7 +105,7 @@ def main():
         ("Best Giant Bubble Kit NZ", 210, "product", "commercial", 8.5, 40),
         ("Giant Bubbles Party Hire Auckland", 90, "local", "commercial", 7.0, 25),
     ]
-    # Rankings for these new NZ keywords — these are unranked (position=0)
+    # Rankings for these new NZ keywords - these are unranked (position=0)
     for kw, vol, cat, intent, opp, diff in nz_additions:
         kid = add_keyword_if_missing(conn, 1, kw, vol, cat, intent, opp, diff)
         added_keywords += 1

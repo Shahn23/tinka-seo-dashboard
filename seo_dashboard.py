@@ -1,4 +1,4 @@
-"""SEO Dashboard v0.2 — Giant Bubbles by Tinka
+"""SEO Dashboard v0.2 - Giant Bubbles by Tinka
 MOZ/SemRush-level analytics: rank distribution, position changes, competitive gap,
 content performance correlation, alerts, and export.
 
@@ -104,7 +104,7 @@ def color_pos_change(val):
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 st.sidebar.title("🔍 SEO Dashboard")
 st.sidebar.markdown("**Giant Bubbles by Tinka**")
-st.sidebar.markdown("**v0.2** — MOZ/SemRush Level")
+st.sidebar.markdown("**v0.2** - MOZ/SemRush Level")
 
 # Domain filter
 domains_df = query_db("SELECT name, display_name FROM domains WHERE is_active=1")
@@ -163,7 +163,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = tabs
 # ═════════════════════════════════════════════════════════════════════════════
 with tab1:
     st.header("Keyword Rankings & Position Tracking")
-    st.caption("Rank distribution, winners/losers, and trend analysis — like MOZ Pro's Rank Tracker")
+    st.caption("Rank distribution, winners/losers, and trend analysis - like MOZ Pro's Rank Tracker")
 
     # ── 1a. Current keywords with latest ranks ───────────────────────────
     kw_df = query_db(f"""
@@ -411,7 +411,7 @@ with tab1:
             if not trend.empty:
                 col_t1, col_t2 = st.columns(2)
                 with col_t1:
-                    fig = px.line(trend, x="date", y="position", title=f"{sel_kw} — Position Trend ({selected_period_label})",
+                    fig = px.line(trend, x="date", y="position", title=f"{sel_kw} - Position Trend ({selected_period_label})",
                                   markers=True, color_discrete_sequence=["#ff6b6b"])
                     fig.update_traces(line=dict(width=2))
                     fig.update_layout(yaxis=dict(autorange="reversed"), height=300,
@@ -440,7 +440,7 @@ with tab1:
     # ── New Keyword Opportunities ─────────────────────────────────────────
     st.divider()
     st.subheader("🆕 New Keyword Opportunities (from Research)")
-    st.caption("Keywords identified — no ranking data yet. These need content to target.")
+    st.caption("Keywords identified - no ranking data yet. These need content to target.")
 
     new_kw_df = query_db(f"""
         SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent, k.volume,
@@ -493,14 +493,14 @@ with tab1:
             st.download_button("📥 Download CSV", data=csv_data, file_name="new_keyword_opportunities.csv",
                                mime="text/csv", key="newkw_export")
     else:
-        st.info("All keywords have ranking data — no untracked keywords.")
+        st.info("All keywords have ranking data - no untracked keywords.")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 2: COMPETITIVE ANALYSIS (NEW — SemRush level)
+# TAB 2: COMPETITIVE ANALYSIS (NEW - SemRush level)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab2:
     st.header("📊 Competitive & Keyword Gap Analysis")
-    st.caption("Market coverage, share of voice, and gap analysis — like SemRush's Domain vs Domain")
+    st.caption("Market coverage, share of voice, and gap analysis - like SemRush's Domain vs Domain")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -622,7 +622,7 @@ with tab2:
 
     # ── Keyword Cluster Heatmap ───────────────────────────────────────────
     st.subheader("🗂️ Keyword Cluster Matrix")
-    st.caption("Keywords grouped by category × intent — see coverage gaps at a glance")
+    st.caption("Keywords grouped by category × intent - see coverage gaps at a glance")
 
     cluster_df = query_db(f"""
         SELECT k.category, k.intent, COUNT(*) AS cnt,
@@ -664,7 +664,7 @@ with tab2:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab3:
     st.header("Technical SEO Issues")
-    st.caption("P0/P1 prioritization board, fix progress tracking — like SemRush Site Audit")
+    st.caption("P0/P1 prioritization board, fix progress tracking - like SemRush Site Audit")
 
     where2 = []
     params2 = []
@@ -722,7 +722,7 @@ with tab3:
 
         col_p0, col_p1 = st.columns(2)
         with col_p0:
-            st.markdown("**🔴 P0 — Critical (Fix Now)**")
+            st.markdown("**🔴 P0 - Critical (Fix Now)**")
             if not p0.empty:
                 for _, row in p0.iterrows():
                     st.markdown(f"""
@@ -737,7 +737,7 @@ with tab3:
                 st.success("No critical issues open! 🎉")
 
         with col_p1:
-            st.markdown("**🟠 P1 — High Priority (Fix Soon)**")
+            st.markdown("**🟠 P1 - High Priority (Fix Soon)**")
             if not p1.empty:
                 for _, row in p1.iterrows():
                     st.markdown(f"""
@@ -834,7 +834,7 @@ with tab3:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab4:
     st.header("Content Idea Backlog")
-    st.caption("Content performance correlation & priority matrix — like SemRush Content Marketing")
+    st.caption("Content performance correlation & priority matrix - like SemRush Content Marketing")
 
     where3 = []
     params3 = []
@@ -900,7 +900,7 @@ with tab4:
 
         # ── Content Performance Correlation ───────────────────────────────
         st.subheader("📊 Content Performance Correlation")
-        st.caption("Content ideas linked to actual rankings — track if published content is ranking for its target keyword")
+        st.caption("Content ideas linked to actual rankings - track if published content is ranking for its target keyword")
 
         correlated = ideas_df[ideas_df["current_position"].notna()].copy()
         uncorrelated = ideas_df[ideas_df["current_position"].isna()].copy()
@@ -967,7 +967,7 @@ with tab4:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab5:
     st.header("🔔 Alerts & Notifications")
-    st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests — like MOZ Pro Alerts")
+    st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests - like MOZ Pro Alerts")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -1025,7 +1025,7 @@ with tab5:
     """)
 
     if not opp_alerts.empty:
-        st.info(f"**{len(opp_alerts)} high-opportunity keywords** are not yet ranked — create content to target them!")
+        st.info(f"**{len(opp_alerts)} high-opportunity keywords** are not yet ranked - create content to target them!")
         for _, row in opp_alerts.head(5).iterrows():
             st.markdown(f"""
             <div class="alert-good">
@@ -1144,16 +1144,16 @@ with tab5:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab6:
     st.header("Sync, Settings & Integrations")
-    st.caption("Data sync controls, API integration setup, and tool recommendations — like MOZ Pro Campaign Settings")
+    st.caption("Data sync controls, API integration setup, and tool recommendations - like MOZ Pro Campaign Settings")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
     <strong>🌐 Recommended Tool Stack for Full SemRush/MOZ-Level Coverage:</strong><br><br>
-    1. <strong>Google Search Console</strong> ✅ (connected) — Ranking, clicks, impressions<br>
-    2. <strong>Google Ads API</strong> 🔲 (needs credentials) — Real search volume, competition data<br>
-    3. <strong>Google Analytics 4</strong> 🔲 (needs credentials) — Traffic source correlation with rankings<br>
-    4. <strong>Ahrefs API</strong> 🔲 (paid) — Backlink profiles, competitor domains, content gap<br>
-    5. <strong>Moz API</strong> 🔲 (paid) — Domain Authority, Spam Score, Page Authority<br>
+    1. <strong>Google Search Console</strong> ✅ (connected) - Ranking, clicks, impressions<br>
+    2. <strong>Google Ads API</strong> 🔲 (needs credentials) - Real search volume, competition data<br>
+    3. <strong>Google Analytics 4</strong> 🔲 (needs credentials) - Traffic source correlation with rankings<br>
+    4. <strong>Ahrefs API</strong> 🔲 (paid) - Backlink profiles, competitor domains, content gap<br>
+    5. <strong>Moz API</strong> 🔲 (paid) - Domain Authority, Spam Score, Page Authority<br>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1210,12 +1210,12 @@ with tab6:
             exists = os.path.exists(fpath)
             icon = "✅" if exists else "❌"
             size = os.path.getsize(fpath) if exists else 0
-            st.markdown(f"{icon} **{label}** — {size:,} bytes" if exists else f"{icon} **{label}** — Not found")
+            st.markdown(f"{icon} **{label}** - {size:,} bytes" if exists else f"{icon} **{label}** - Not found")
 
     st.divider()
 
     # ── Google Ads API Integration Frame ──────────────────────────────────
-    st.subheader("🎯 Google Ads API — Setup Guide")
+    st.subheader("🎯 Google Ads API - Setup Guide")
     st.markdown("""
     To enable **real search volume data** and **keyword competition metrics**:
 
@@ -1231,7 +1231,7 @@ with tab6:
 
     **Why this matters:** GSC only shows clicks + impressions (post-ranking).
     Google Ads Keyword Planner shows real search volumes, competition, and
-    suggested bid data — the same data SemRush and MOZ use for keyword research.
+    suggested bid data - the same data SemRush and MOZ use for keyword research.
     """)
 
     gads_customer_id = st.text_input("Google Ads Customer ID (optional)", placeholder="e.g. 123-456-7890",
@@ -1253,7 +1253,7 @@ with tab6:
     st.divider()
 
     # ── Google Analytics 4 Integration Frame ──────────────────────────────
-    st.subheader("📊 Google Analytics 4 — Setup Guide")
+    st.subheader("📊 Google Analytics 4 - Setup Guide")
     st.markdown("""
     To correlate **keyword rankings with traffic sources**:
 
@@ -1265,7 +1265,7 @@ with tab6:
     5. Enter your GA4 Property ID below
     ```
 
-    **Why this matters:** Connect rank changes to traffic — did a keyword jump
+    **Why this matters:** Connect rank changes to traffic - did a keyword jump
     from #15 to #5 result in more organic traffic? Is the blog content driving
     the sessions you expected?
     """)

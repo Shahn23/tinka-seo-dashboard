@@ -1,4 +1,4 @@
-"""SEO Dashboard v0.2 — Giant Bubbles by Tinka
+"""SEO Dashboard v0.2 - Giant Bubbles by Tinka
 MOZ/SemRush-level analytics: rank distribution, position changes, competitive gap,
 content performance correlation, alerts, and export.
 
@@ -18,9 +18,14 @@ import plotly.graph_objects as go
 import streamlit as st
 import requests
 import urllib.parse
+import re
+
+# ── AI Generator (imported as module) ───────────────────────────────────────
+sys.path.insert(0, PROJECT_DIR)
+from scripts.ai_generator import generate_keywords, generate_article_ideas, generate_article_body
 
 # ── Page config ──────────────────────────────────────────────────────────────
-st.set_page_config(page_title="SEO Dashboard v0.5 — Rusty + GEO", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="SEO Dashboard v0.6 - AI + Generation", layout="wide", initial_sidebar_state="expanded")
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(PROJECT_DIR, "data", "seo_dashboard.db")
@@ -108,10 +113,140 @@ def color_pos_change(val):
         return "color: #ff4444; font-weight: 600"
     return "color: #888"
 
+# ── CRUD helpers for AI-generated content ───────────────────────────────────
+def save_keywords_to_db(keywords_list, domain_id):
+    """Save AI-generated keywords to the DB. Returns (saved_count, skipped_count)."""
+    conn = get_conn()
+    saved = 0
+    skipped = 0
+    for kw in keywords_list:
+        keyword_text = kw.get("keyword", "").strip()
+        if not keyword_text:
+            continue
+        # Check duplicate
+        exists = conn.execute(
+            "SELECT id FROM keywords WHERE keyword = ? AND domain_id = ?",
+            (keyword_text, domain_id)
+        ).fetchone()
+        if exists:
+            skipped += 1
+            continue
+        try:
+            conn.execute("""
+                INSERT INTO keywords (domain_id, keyword, category, intent, volume, opportunity_score, difficulty, is_high_priority)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                domain_id,
+                keyword_text,
+                kw.get("category", "general"),
+                kw.get("intent", "informational"),
+                int(kw.get("volume", 0)),
+                float(kw.get("opportunity_score", 5.0)) if kw.get("opportunity_score") else 5.0,
+                int(kw.get("difficulty", 50)),
+                1 if kw.get("opportunity_score", 5) >= 7 else 0,
+            ))
+            saved += 1
+        except Exception as e:
+            st.warning(f"Error saving keyword '{keyword_text}': {e}")
+    conn.commit()
+    conn.close()
+    return saved, skipped
+
+def save_article_ideas_to_db(ideas_list, domain_id):
+    """Save AI-generated article ideas to the DB. Returns (saved_count, skipped_count)."""
+    conn = get_conn()
+    saved = 0
+    skipped = 0
+    for idea in ideas_list:
+        title = idea.get("title", "").strip()
+        if not title:
+            continue
+        # Check duplicate
+        exists = conn.execute(
+            "SELECT id FROM content_ideas WHERE title = ?",
+            (title,)
+        ).fetchone()
+        if exists:
+            skipped += 1
+            continue
+        kw = idea.get("target_keyword", "")
+        try:
+            conn.execute("""
+                INSERT INTO content_ideas (title, target_keyword, category, estimated_searches, opportunity_score, effort, content_type, outline, status, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'backlog', 'ai-generated')
+            """, (
+                title,
+                kw,
+                idea.get("category", "general"),
+                int(idea.get("estimated_searches", 0)),
+                float(idea.get("opportunity_score", 5.0)),
+                idea.get("effort", "medium"),
+                idea.get("content_type", "blog"),
+                idea.get("outline", ""),
+            ))
+            saved += 1
+        except Exception as e:
+            st.warning(f"Error saving idea '{title}': {e}")
+    conn.commit()
+    conn.close()
+    return saved, skipped
+
+def delete_keyword_from_db(keyword_id):
+    """Delete a keyword and its rank history from the DB."""
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM rank_history WHERE keyword_id = ?", (keyword_id,))
+        conn.execute("DELETE FROM keywords WHERE id = ?", (keyword_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        st.error(f"Error deleting keyword: {e}")
+        return False
+    finally:
+        conn.close()
+
+def delete_content_idea_from_db(idea_id):
+    """Delete a content idea from the DB."""
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM content_ideas WHERE id = ?", (idea_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        st.error(f"Error deleting content idea: {e}")
+        return False
+    finally:
+        conn.close()
+
+def delete_article_from_db(article_id):
+    """Delete a published article record from the DB."""
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM published_articles WHERE id = ?", (article_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        st.error(f"Error deleting article: {e}")
+        return False
+    finally:
+        conn.close()
+
+def execute_db(sql, params=()):
+    """Execute a direct DB write and return the result message."""
+    conn = get_conn()
+    try:
+        conn.execute(sql, params)
+        conn.commit()
+        return "ok"
+    except Exception as e:
+        return f"error: {e}"
+    finally:
+        conn.close()
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 st.sidebar.title("🔍 SEO Dashboard")
 st.sidebar.markdown("**Giant Bubbles by Tinka**")
-st.sidebar.markdown("**v0.5** — Rusty SEO + AI GEO Features")
+st.sidebar.markdown("**v0.6** - AI Generation, Delete & Inline Writing")
 
 # Domain filter
 domains_df = query_db("SELECT name, display_name FROM domains WHERE is_active=1")
@@ -194,7 +329,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = tabs
 # ═════════════════════════════════════════════════════════════════════════════
 with tab1:
     st.header("Keyword Rankings & Position Tracking")
-    st.caption("Rank distribution, winners/losers, and trend analysis — like MOZ Pro's Rank Tracker")
+    st.caption("Rank distribution, winners/losers, and trend analysis - like MOZ Pro's Rank Tracker")
 
     # ── 1a. Current keywords with latest ranks ───────────────────────────
     kw_df = query_db(f"""
@@ -442,7 +577,7 @@ with tab1:
             if not trend.empty:
                 col_t1, col_t2 = st.columns(2)
                 with col_t1:
-                    fig = px.line(trend, x="date", y="position", title=f"{sel_kw} — Position Trend ({selected_period_label})",
+                    fig = px.line(trend, x="date", y="position", title=f"{sel_kw} - Position Trend ({selected_period_label})",
                                   markers=True, color_discrete_sequence=["#ff6b6b"])
                     fig.update_traces(line=dict(width=2))
                     fig.update_layout(yaxis=dict(autorange="reversed"), height=300,
@@ -468,10 +603,30 @@ with tab1:
                 st.caption(f"**Performance:** Best: #{max_pos:.0f} | Worst: #{min_pos:.0f} | "
                           f"Avg CTR: {avg_ctr*100:.1f}% | Trend: {trend_arrow} ({abs(trend_direction):.0f} spots)")
 
+    # ── Delete Keywords ────────────────────────────────────────────────────
+    with st.expander("🗑️ Remove Keywords from Database", expanded=False):
+        delete_kw = kw_df[["id", "keyword", "domain"]].copy() if not kw_df.empty else pd.DataFrame()
+        if not delete_kw.empty:
+            kw_labels = [f"[#{r['id']}] {r['keyword']} ({r['domain']})" for _, r in delete_kw.iterrows()]
+            selected_kw = st.multiselect("Select keywords to remove", kw_labels, key="del_kw")
+            if selected_kw:
+                if st.button("🗑️ Delete Selected Keywords", type="secondary", use_container_width=True, key="btn_del_kw"):
+                    count = 0
+                    for label in selected_kw:
+                        kw_id = int(label.split("]")[0].strip("[").replace("#", ""))
+                        if delete_keyword_from_db(kw_id):
+                            count += 1
+                    if count:
+                        st.success(f"Deleted {count} keyword(s) and their rank history.")
+                        st.cache_data.clear()
+                        st.rerun()
+        else:
+            st.info("No keywords loaded to display for deletion.")
+
     # ── New Keyword Opportunities ─────────────────────────────────────────
     st.divider()
     st.subheader("🆕 New Keyword Opportunities (from Research)")
-    st.caption("Keywords identified — no ranking data yet. These need content to target.")
+    st.caption("Keywords identified - no ranking data yet. These need content to target.")
 
     new_kw_df = query_db(f"""
         SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent, k.volume,
@@ -524,14 +679,44 @@ with tab1:
             st.download_button("📥 Download CSV", data=csv_data, file_name="new_keyword_opportunities.csv",
                                mime="text/csv", key="newkw_export")
     else:
-        st.info("All keywords have ranking data — no untracked keywords.")
+        st.info("All keywords have ranking data - no untracked keywords.")
+
+    # ── Generate New Keywords from AI ──────────────────────────────────────
+    st.divider()
+    st.subheader("🤖 Generate New Keyword Ideas")
+    st.caption("Use AI to discover new keyword opportunities. Enter a topic seed and we'll generate relevant keyword ideas.")
+
+    gen_domain = st.selectbox("Target Domain", ["giantbubbles.co.nz (NZ)", "giantbubblesau.com (AU)"],
+                              index=0, key="gen_kw_domain")
+    gen_market = "NZ" if "NZ" in gen_domain else "AU"
+    gen_domain_id = 1 if "NZ" in gen_domain else 2
+    gen_topic = st.text_input("Topic seed (e.g., 'giant bubble party', 'bubble science kids', 'outdoor fun NZ')",
+                              placeholder="Describe what kind of keywords you want...",
+                              key="gen_kw_topic")
+    gen_count = st.slider("Number of keywords to generate", 5, 30, 15, key="gen_kw_count")
+
+    if st.button("🚀 Generate Keywords", type="primary", use_container_width=True, key="btn_gen_kw"):
+        if not gen_topic:
+            st.warning("Please enter a topic seed first.")
+        else:
+            with st.spinner(f"Generating {gen_count} keyword ideas for '{gen_topic}'..."):
+                results = generate_keywords(gen_topic, gen_market, gen_count)
+                if results:
+                    saved, skipped = save_keywords_to_db(results, gen_domain_id)
+                    st.success(f"Saved {saved} new keywords to DB. {skipped} duplicates skipped.")
+                    st.balloons()
+                    st.cache_data.clear()
+                else:
+                    st.error("Failed to generate keywords. Check API key configuration.")
+
+    st.caption("Tip: Try different topic seeds to discover keywords across various categories (products, local, educational, etc.)")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 2: COMPETITIVE ANALYSIS (NEW — SemRush level)
+# TAB 2: COMPETITIVE ANALYSIS (NEW - SemRush level)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab2:
     st.header("📊 Competitive & Keyword Gap Analysis")
-    st.caption("Market coverage, share of voice, and gap analysis — like SemRush's Domain vs Domain")
+    st.caption("Market coverage, share of voice, and gap analysis - like SemRush's Domain vs Domain")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -653,7 +838,7 @@ with tab2:
 
     # ── Keyword Cluster Heatmap ───────────────────────────────────────────
     st.subheader("🗂️ Keyword Cluster Matrix")
-    st.caption("Keywords grouped by category × intent — see coverage gaps at a glance")
+    st.caption("Keywords grouped by category × intent - see coverage gaps at a glance")
 
     cluster_df = query_db(f"""
         SELECT k.category, k.intent, COUNT(*) AS cnt,
@@ -695,7 +880,7 @@ with tab2:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab3:
     st.header("Technical SEO Issues")
-    st.caption("P0/P1 prioritization board, fix progress tracking — like SemRush Site Audit")
+    st.caption("P0/P1 prioritization board, fix progress tracking - like SemRush Site Audit")
 
     where2 = []
     params2 = []
@@ -753,7 +938,7 @@ with tab3:
 
         col_p0, col_p1 = st.columns(2)
         with col_p0:
-            st.markdown("**🔴 P0 — Critical (Fix Now)**")
+            st.markdown("**🔴 P0 - Critical (Fix Now)**")
             if not p0.empty:
                 for _, row in p0.iterrows():
                     st.markdown(f"""
@@ -768,7 +953,7 @@ with tab3:
                 st.success("No critical issues open! 🎉")
 
         with col_p1:
-            st.markdown("**🟠 P1 — High Priority (Fix Soon)**")
+            st.markdown("**🟠 P1 - High Priority (Fix Soon)**")
             if not p1.empty:
                 for _, row in p1.iterrows():
                     st.markdown(f"""
@@ -865,7 +1050,7 @@ with tab3:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab4:
     st.header("Content Idea Backlog")
-    st.caption("Content performance correlation & priority matrix — like SemRush Content Marketing")
+    st.caption("Content performance correlation & priority matrix - like SemRush Content Marketing")
 
     where3 = []
     params3 = []
@@ -931,7 +1116,7 @@ with tab4:
 
         # ── Content Performance Correlation ───────────────────────────────
         st.subheader("📊 Content Performance Correlation")
-        st.caption("Content ideas linked to actual rankings — track if published content is ranking for its target keyword")
+        st.caption("Content ideas linked to actual rankings - track if published content is ranking for its target keyword")
 
         correlated = ideas_df[ideas_df["current_position"].notna()].copy()
         uncorrelated = ideas_df[ideas_df["current_position"].isna()].copy()
@@ -990,11 +1175,86 @@ with tab4:
         csv_data = df_to_csv(ideas_df)
         st.download_button("📥 Download Content Ideas CSV", data=csv_data,
                            file_name="content_ideas.csv", mime="text/csv")
+
+        # ── Delete Content Ideas ───────────────────────────────────────────
+        st.divider()
+        st.subheader("🗑️ Remove Content Ideas")
+        st.caption("Select unwanted content ideas to remove from the database.")
+        with st.expander("⚠️ Delete Content Ideas", expanded=False):
+            delete_ideas = ideas_df[["id", "title", "opportunity_score"]].copy()
+            if not delete_ideas.empty:
+                delete_labels = [f"[#{r['id']}] {r['title'][:55]} (Score: {r['opportunity_score']:.0f})"
+                                 for _, r in delete_ideas.iterrows()]
+                selected_to_delete = st.multiselect("Select ideas to remove", delete_labels, key="del_ideas")
+                if selected_to_delete:
+                    if st.button("🗑️ Delete Selected Ideas", type="secondary", use_container_width=True, key="btn_del_ideas"):
+                        count = 0
+                        for label in selected_to_delete:
+                            idea_id = int(label.split("]")[0].strip("[").replace("#", ""))
+                            if delete_content_idea_from_db(idea_id):
+                                count += 1
+                        if count:
+                            st.success(f"Deleted {count} content idea(s).")
+                            st.cache_data.clear()
+                            st.rerun()
+            else:
+                st.info("No content ideas to delete.")
+
     else:
         st.info("No content ideas found.")
 
+    # ── Generate Article Ideas from AI ──────────────────────────────────────
+    st.divider()
+    st.subheader("🤖 Generate New Article Ideas")
+    st.caption("Use AI to generate fresh blog post ideas based on your keywords or a topic.")
+
+    col_ai1, col_ai2 = st.columns([3, 1])
+    with col_ai1:
+        gen_idea_topic = st.text_input("Keywords or topic for article ideas",
+                                       placeholder="e.g. giant bubbles, party, NZ events, outdoor fun",
+                                       value="giant bubbles", key="gen_idea_topic")
+    with col_ai2:
+        gen_idea_count = st.number_input("Count", min_value=3, max_value=25, value=10, key="gen_idea_count")
+
+    if st.button("🚀 Generate Article Ideas", type="primary", use_container_width=True, key="btn_gen_ideas"):
+        if not gen_idea_topic:
+            st.warning("Please enter keywords or a topic first.")
+        else:
+            with st.spinner(f"Generating {gen_idea_count} article ideas around '{gen_idea_topic}'..."):
+                results = generate_article_ideas(gen_idea_topic, gen_idea_count)
+                if results:
+                    # Save to DB - use both domains
+                    saved_total = 0
+                    skipped_total = 0
+                    for did in [1, 2]:
+                        s, sk = save_article_ideas_to_db(results, did)
+                        saved_total += s
+                        skipped_total += sk
+                    st.success(f"Generated and saved {saved_total} new article ideas! ({skipped_total} duplicates skipped)")
+                    st.balloons()
+                    st.cache_data.clear()
+
+                    # Preview
+                    st.subheader("📋 Preview of Generated Ideas")
+                    for i, idea in enumerate(results[:8], 1):
+                        st.markdown(f"""
+                        <div style="background:#1a1c2e;border:1px solid #2a2d4a;border-radius:8px;padding:10px;margin:6px 0;">
+                            <strong style="color:#00d4aa;">{i}. {idea.get('title', 'Untitled')}</strong><br>
+                            <span style="color:#888;font-size:12px;">
+                                🎯 {idea.get('target_keyword', 'N/A')} | 
+                                📈 {int(idea.get('estimated_searches', 0)):,}/mo | 
+                                ⭐ {idea.get('opportunity_score', 0):.0f} opp | 
+                                💪 {idea.get('effort', 'medium')}
+                            </span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.error("Failed to generate article ideas. Check API key configuration.")
+
+    st.caption("Generated ideas are saved to the Content Idea Backlog where you can review, write articles, or delete unwanted ones.")
+
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 5: ✍️ CONTENT STUDIO (NEW v0.4 — Article Writing Pipeline)
+# TAB 5: ✍️ CONTENT STUDIO (NEW v0.4 - Article Writing Pipeline)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab5:
     st.header("✍️ Content Studio v0.4")
@@ -1007,7 +1267,7 @@ with tab5:
     2. Write a full SEO-optimized article (with the help of AI)<br>
     3. Push to Shopify as a draft blog post<br>
     4. Review and publish from the Shopify admin<br>
-    <em>First article already posted as a draft — check your Shopify Blog → Drafts!</em>
+    <em>First article already posted as a draft - check your Shopify Blog → Drafts!</em>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1053,7 +1313,7 @@ with tab5:
     st.divider()
 
     # ── Content Ideas Ready for Writing ───────────────────────────────────
-    st.subheader("🎯 Ready to Write — Unpublished Content Ideas")
+    st.subheader("🎯 Ready to Write - Unpublished Content Ideas")
     st.caption("These high-opportunity content ideas don't have articles yet. Pick one to author.")
 
     ready_to_write = query_db("""
@@ -1066,7 +1326,7 @@ with tab5:
     """)
 
     if not ready_to_write.empty:
-        st.markdown(f"**{len(ready_to_write)} content ideas ready** — sorted by opportunity score (highest first)")
+        st.markdown(f"**{len(ready_to_write)} content ideas ready** - sorted by opportunity score (highest first)")
 
         for _, row in ready_to_write.head(12).iterrows():
             target_kw = row["target_keyword"] or "N/A"
@@ -1102,7 +1362,9 @@ with tab5:
 
         # Show the pipeline command
         st.divider()
-        st.subheader("⚡ Quick Launch — Write Next Article")
+        st.subheader("⚡ Write Article from Dashboard")
+        st.caption("Select a content idea, generate the article with AI, and post it to Shopify as a draft - all from here.")
+
         idea_ids = ready_to_write["id"].tolist()
         idea_labels = [
             f"[#{r['id']}] {r['title'][:50]} (⭐{r['opportunity_score']:.0f})"
@@ -1110,30 +1372,134 @@ with tab5:
         ]
         selected_idx = 0
         if idea_labels:
-            selected_label = st.selectbox("Select a content idea to write", idea_labels, key="cs_idea")
-            selected_idx = idea_labels.index(selected_label)
-            selected_row = ready_to_write.iloc[selected_idx]
+            col_sel1, col_sel2, col_sel3 = st.columns([2, 1, 1])
+            with col_sel1:
+                selected_label = st.selectbox("Select a content idea to write", idea_labels, key="cs_idea_new")
+                selected_idx = idea_labels.index(selected_label)
+                selected_row = ready_to_write.iloc[selected_idx]
+            with col_sel2:
+                market = st.radio("Market", ["NZ", "AU"], index=0, key="cs_market_new")
+            with col_sel3:
+                st.markdown("**Generated with:**")
+                gen_method = st.radio("Method", ["AI Generate", "Manual HTML"], index=0, key="cs_gen_method")
 
-            col_cmd1, col_cmd2 = st.columns([1, 1])
-            with col_cmd1:
-                market = st.radio("Target Market", ["NZ", "AU"], index=0, key="cs_market")
-            with col_cmd2:
-                st.markdown("**Article template hint:**")
-                if selected_row.get("outline") and pd.notna(selected_row["outline"]):
-                    st.caption(f"Outline available in DB: {str(selected_row['outline'])[:200]}...")
-                else:
-                    st.caption("See blog_post_topics_from_new_keywords_v2.md for full outlines")
+            if gen_method == "Manual HTML":
+                st.info("Use the CLI commands shown above to manually write and upload the article.")
+            else:
+                st.markdown("""
+                <div style="background:#0d2137;border:1px solid #58a6ff;border-radius:10px;padding:14px;margin:10px 0;">
+                    <strong>🤖 AI Article Generator:</strong> Click below to have AI write a complete SEO-optimized article
+                    based on the selected content idea. The article will be posted to Shopify as a draft.
+                </div>
+                """, unsafe_allow_html=True)
 
-            st.code(
-                f"# To write this article:\n"
-                f"# 1. Create articles/{selected_row['id']}_{selected_row['target_keyword'] or 'article'}.html\n"
-                f"# 2. Run:\n"
-                f"python scripts/article_writer.py --idea {int(selected_row['id'])} \\\n"
-                f"  --body articles/{selected_row['target_keyword'] or 'article'}.html \\\n"
-                f"  --market {market}\n"
-                f"# 3. Verify at: https://admin.shopify.com/store/giant-bubbles-by-tinka/admin/articles",
-                language="bash"
-            )
+                # Show preview of what will be generated
+                st.caption(f"**About to write:** {selected_row['title']} | Target: {selected_row['target_keyword']} | Market: {market}")
+
+                col_wb1, col_wb2 = st.columns([1, 1])
+                with col_wb1:
+                    if st.button("🚀 Generate & Post to Shopify", type="primary", use_container_width=True, key="btn_gen_article"):
+                        with st.spinner("Generating article with AI..."):
+                            outline = selected_row.get("outline", "") if pd.notna(selected_row.get("outline")) else ""
+                            body_html = generate_article_body(
+                                selected_row['title'],
+                                selected_row['target_keyword'] or "",
+                                outline,
+                                market
+                            )
+                            if body_html and not body_html.startswith("<"):
+                                # Wrap in basic HTML if AI returned plain text
+                                body_html = f"<p>{body_html}</p>"
+
+                            if body_html and "ERROR" not in body_html:
+                                st.session_state["gen_article_body"] = body_html
+                                st.session_state["gen_article_title"] = selected_row['title']
+                                st.session_state["gen_article_kw"] = selected_row['target_keyword']
+                                st.session_state["gen_article_idea_id"] = int(selected_row['id'])
+                                st.session_state["gen_article_market"] = market
+                                st.success("Article generated! Now posting to Shopify...")
+
+                                # Post to Shopify via article_writer.py
+                                import tempfile
+                                tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False, dir=os.path.join(PROJECT_DIR, "articles"))
+                                tmp.write(body_html)
+                                tmp_path = tmp.name
+                                tmp.close()
+
+                                result = subprocess.run(
+                                    ["python", "scripts/article_writer.py",
+                                     "--idea", str(int(selected_row['id'])),
+                                     "--body", tmp_path,
+                                     "--market", market,
+                                     "--title", selected_row['title'][:100],
+                                     "--keywords", selected_row['target_keyword'] or "",
+                                     "--tags", f"ai-generated,{selected_row.get('category','general')}".lower()],
+                                    capture_output=True, text=True, timeout=60, cwd=PROJECT_DIR
+                                )
+                                # Clean up temp file
+                                try:
+                                    os.unlink(tmp_path)
+                                except:
+                                    pass
+
+                                if result.returncode == 0:
+                                    st.balloons()
+                                    st.success("Article posted to Shopify as a draft! Check your Shopify admin.")
+                                    st.code(result.stdout[:1000], language="bash")
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(f"Shopify post failed: {result.stderr[:500]}")
+                                    st.code(result.stdout[:500], language="bash")
+                            else:
+                                st.error(f"Article generation failed: {body_html[:200] if body_html else 'No response from AI'}")
+
+                with col_wb2:
+                    if st.button("📝 Preview Generated Article", use_container_width=True, key="btn_preview_article"):
+                        outline = selected_row.get("outline", "") if pd.notna(selected_row.get("outline")) else ""
+                        body_html = generate_article_body(
+                            selected_row['title'],
+                            selected_row['target_keyword'] or "",
+                            outline,
+                            market
+                        )
+                        if body_html and "ERROR" not in body_html:
+                            st.session_state["gen_article_body"] = body_html
+                            st.session_state["gen_article_title"] = selected_row['title']
+
+                # Show preview if available
+                if "gen_article_body" in st.session_state and st.session_state.get("gen_article_title") == selected_row['title']:
+                    with st.expander("📄 Article Preview", expanded=True):
+                        st.markdown(f"### {selected_row['title']}")
+                        st.markdown(st.session_state["gen_article_body"], unsafe_allow_html=True)
+                        st.divider()
+                        st.caption(f"Word count (approx): {len(st.session_state['gen_article_body'].split()):,}")
+
+                # Delete button for published articles
+                st.divider()
+                st.subheader("🗑️ Remove Published Article Records")
+                with st.expander("⚠️ Manage Articles", expanded=False):
+                    articles_df = query_db("""
+                        SELECT pa.id, pa.title, pa.market, pa.status, pa.created_at
+                        FROM published_articles pa
+                        ORDER BY pa.created_at DESC
+                    """)
+                    if not articles_df.empty:
+                        article_labels = [f"[#{r['id']}] {r['title'][:50]} ({r['market']}) - {r['status']}"
+                                         for _, r in articles_df.iterrows()]
+                        selected_articles = st.multiselect("Select article records to remove from dashboard DB (does not delete from Shopify)", article_labels, key="del_articles")
+                        if selected_articles:
+                            if st.button("🗑️ Remove Selected Records", type="secondary", use_container_width=True, key="btn_del_articles"):
+                                count = 0
+                                for label in selected_articles:
+                                    art_id = int(label.split("]")[0].strip("[").replace("#", ""))
+                                    if delete_article_from_db(art_id):
+                                        count += 1
+                                if count:
+                                    st.success(f"Removed {count} article record(s) from dashboard. (Articles remain on Shopify).")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                    else:
+                        st.info("No articles in the dashboard database.")
 
     else:
         st.success("🎉 All content ideas have been published or are being written!")
@@ -1177,11 +1543,11 @@ with tab5:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 6: 🔍 DEEP SITE AUDIT (NEW v0.5 — RustySEO Inspired)
+# TAB 6: 🔍 DEEP SITE AUDIT (NEW v0.5 - RustySEO Inspired)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab6:
     st.header("🔍 Deep Site Audit")
-    st.caption("Live page analysis — inspired by RustySEO's free website crawling toolkit. Checks meta tags, schema, page speed, images, and more.")
+    st.caption("Live page analysis - inspired by RustySEO's free website crawling toolkit. Checks meta tags, schema, page speed, images, and more.")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -1190,7 +1556,7 @@ with tab6:
     for deep website crawling, log file analysis, AI-powered audits, and multi-format reporting.
     <br><br>
     <strong>💡 To get RustySEO:</strong> Download the installer from <strong>rustyseo.com</strong> (Windows/Mac/Linux).
-    It runs as a native desktop app — no crawl limits, no API costs. Configure GSC + PageSpeed + Gemini API keys for the full feature set.
+    It runs as a native desktop app - no crawl limits, no API costs. Configure GSC + PageSpeed + Gemini API keys for the full feature set.
     <br><br>
     <em>This tab provides a lightweight in-dashboard audit for quick checks. For hundreds of pages and log analysis, use the RustySEO desktop app.</em>
     </div>
@@ -1359,7 +1725,7 @@ with tab6:
             <li>GSC + PageSpeed API integration</li>
             <li>AI-powered analysis (Gemini/Ollama)</li>
             <li>Multi-format reporting (CSV/Excel/PDF)</li>
-            <li>Built with Rust — blazing fast</li>
+            <li>Built with Rust - blazing fast</li>
         </ul>
         <a href="https://github.com/mascanho/RustySEO/releases" target="_blank">Download RustySEO</a>
     </div>
@@ -1378,11 +1744,11 @@ with tab6:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 7: 🌐 AI & GEO VISIBILITY (NEW v0.5 — BabyLoveGrowth Inspired)
+# TAB 7: 🌐 AI & GEO VISIBILITY (NEW v0.5 - BabyLoveGrowth Inspired)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab7:
     st.header("🌐 AI & GEO Visibility")
-    st.caption("Generative Engine Optimization (GEO) — inspired by BabyLoveGrowth.ai's AI search visibility tracking")
+    st.caption("Generative Engine Optimization (GEO) - inspired by BabyLoveGrowth.ai's AI search visibility tracking")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -1391,10 +1757,10 @@ with tab7:
     performs technical audits, and manages Reddit visibility workflows.
     <br><br>
     <strong>💡 Four-Pillar GEO Strategy:</strong><br>
-    1. <strong>Content Plan</strong> — Create articles for target audiences (→ Content Studio tab)<br>
-    2. <strong>Backlinks</strong> — Build authority through niche backlinks (→ Settings for Ahrefs/Moz API)<br>
-    3. <strong>Technical Audit</strong> — Fix issues blocking Google & AI search engines (→ SEO Issues tab)<br>
-    4. <strong>AI & Social Visibility</strong> — Track AI search presence & Reddit conversations (→ this tab)
+    1. <strong>Content Plan</strong> - Create articles for target audiences (→ Content Studio tab)<br>
+    2. <strong>Backlinks</strong> - Build authority through niche backlinks (→ Settings for Ahrefs/Moz API)<br>
+    3. <strong>Technical Audit</strong> - Fix issues blocking Google & AI search engines (→ SEO Issues tab)<br>
+    4. <strong>AI & Social Visibility</strong> - Track AI search presence & Reddit conversations (→ this tab)
     </div>
     """, unsafe_allow_html=True)
 
@@ -1450,7 +1816,7 @@ with tab7:
                     ("Authority Signals", "⏳ Needed", "Build niche-relevant backlinks"),
                     ("Structured Lists", "⚠️ Add more", "Use lists/tables to make content AI-friendly"),
                 ]:
-                    st.markdown(f"**{item}** — {status}  \n💡 {tip}")
+                    st.markdown(f"**{item}** - {status}  \n💡 {tip}")
             else:
                 st.info(f"No keyword data found for '{ai_query}'.")
         elif not check_ai:
@@ -1458,7 +1824,7 @@ with tab7:
 
     with geo_subtabs[1]:
         st.subheader("🔍 Content Gap Analysis")
-        st.caption("High-demand topics not yet ranking — your best targets for new content")
+        st.caption("High-demand topics not yet ranking - your best targets for new content")
 
         gap_content = query_db("""
             SELECT ci.id, ci.title, ci.target_keyword, ci.category, ci.estimated_searches,
@@ -1506,7 +1872,7 @@ with tab7:
 
     with geo_subtabs[2]:
         st.subheader("💬 Reddit & Social Visibility")
-        st.caption("Track brand mentions and conversation opportunities — inspired by BabyLoveGrowth's Reddit AI agent")
+        st.caption("Track brand mentions and conversation opportunities - inspired by BabyLoveGrowth's Reddit AI agent")
 
         st.info("Reddit posts now rank in Google's top 10 for many queries. Being visible in relevant threads builds brand awareness and signals authority to AI search engines.")
 
@@ -1531,7 +1897,7 @@ with tab7:
                             for reddit_url in urls_found:
                                 sub = re.search(r'/r/([^/]+)', reddit_url)
                                 sub_name = sub.group(1) if sub else "unknown"
-                                st.markdown(f"[r/{sub_name} — Opportunity]({reddit_url})")
+                                st.markdown(f"[r/{sub_name} - Opportunity]({reddit_url})")
                         else:
                             st.info("No Reddit results found.")
                     else:
@@ -1541,7 +1907,7 @@ with tab7:
 
     with geo_subtabs[3]:
         st.subheader("📈 Competition Radar")
-        st.caption("Track competitive landscape — which keywords you dominate and where competitors are winning")
+        st.caption("Track competitive landscape - which keywords you dominate and where competitors are winning")
 
         col_cr1, col_cr2 = st.columns(2)
         with col_cr1:
@@ -1588,7 +1954,7 @@ with tab7:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab8:
     st.header("🔔 Alerts & Notifications")
-    st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests — like MOZ Pro Alerts")
+    st.caption("Rank drop alerts, keyword opportunity alerts, and weekly digests - like MOZ Pro Alerts")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
@@ -1646,7 +2012,7 @@ with tab8:
     """)
 
     if not opp_alerts.empty:
-        st.info(f"**{len(opp_alerts)} high-opportunity keywords** are not yet ranked — create content to target them!")
+        st.info(f"**{len(opp_alerts)} high-opportunity keywords** are not yet ranked - create content to target them!")
         for _, row in opp_alerts.head(5).iterrows():
             st.markdown(f"""
             <div class="alert-good">
@@ -1765,16 +2131,16 @@ with tab8:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab9:
     st.header("Sync, Settings & Integrations")
-    st.caption("Data sync controls, API integration setup, and tool recommendations — like MOZ Pro Campaign Settings")
+    st.caption("Data sync controls, API integration setup, and tool recommendations - like MOZ Pro Campaign Settings")
 
     st.markdown("""
     <div style="background:#1a1c2e; border:1px solid #2a2d4a; border-radius:10px; padding:15px; margin-bottom:20px;">
     <strong>🌐 Recommended Tool Stack for Full SemRush/MOZ-Level Coverage:</strong><br><br>
-    1. <strong>Google Search Console</strong> ✅ (connected) — Ranking, clicks, impressions<br>
-    2. <strong>Google Ads API</strong> 🔲 (needs credentials) — Real search volume, competition data<br>
-    3. <strong>Google Analytics 4</strong> 🔲 (needs credentials) — Traffic source correlation with rankings<br>
-    4. <strong>Ahrefs API</strong> 🔲 (paid) — Backlink profiles, competitor domains, content gap<br>
-    5. <strong>Moz API</strong> 🔲 (paid) — Domain Authority, Spam Score, Page Authority<br>
+    1. <strong>Google Search Console</strong> ✅ (connected) - Ranking, clicks, impressions<br>
+    2. <strong>Google Ads API</strong> 🔲 (needs credentials) - Real search volume, competition data<br>
+    3. <strong>Google Analytics 4</strong> 🔲 (needs credentials) - Traffic source correlation with rankings<br>
+    4. <strong>Ahrefs API</strong> 🔲 (paid) - Backlink profiles, competitor domains, content gap<br>
+    5. <strong>Moz API</strong> 🔲 (paid) - Domain Authority, Spam Score, Page Authority<br>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1831,12 +2197,12 @@ with tab9:
             exists = os.path.exists(fpath)
             icon = "✅" if exists else "❌"
             size = os.path.getsize(fpath) if exists else 0
-            st.markdown(f"{icon} **{label}** — {size:,} bytes" if exists else f"{icon} **{label}** — Not found")
+            st.markdown(f"{icon} **{label}** - {size:,} bytes" if exists else f"{icon} **{label}** - Not found")
 
     st.divider()
 
     # ── Google Ads API Integration Frame ──────────────────────────────────
-    st.subheader("🎯 Google Ads API — Setup Guide")
+    st.subheader("🎯 Google Ads API - Setup Guide")
     st.markdown("""
     To enable **real search volume data** and **keyword competition metrics**:
 
@@ -1852,7 +2218,7 @@ with tab9:
 
     **Why this matters:** GSC only shows clicks + impressions (post-ranking).
     Google Ads Keyword Planner shows real search volumes, competition, and
-    suggested bid data — the same data SemRush and MOZ use for keyword research.
+    suggested bid data - the same data SemRush and MOZ use for keyword research.
     """)
 
     gads_customer_id = st.text_input("Google Ads Customer ID (optional)", placeholder="e.g. 123-456-7890",
@@ -1874,7 +2240,7 @@ with tab9:
     st.divider()
 
     # ── Google Analytics 4 Integration Frame ──────────────────────────────
-    st.subheader("📊 Google Analytics 4 — Setup Guide")
+    st.subheader("📊 Google Analytics 4 - Setup Guide")
     st.markdown("""
     To correlate **keyword rankings with traffic sources**:
 
@@ -1886,7 +2252,7 @@ with tab9:
     5. Enter your GA4 Property ID below
     ```
 
-    **Why this matters:** Connect rank changes to traffic — did a keyword jump
+    **Why this matters:** Connect rank changes to traffic - did a keyword jump
     from #15 to #5 result in more organic traffic? Is the blog content driving
     the sessions you expected?
     """)
@@ -1911,7 +2277,7 @@ with tab9:
     | **Google Ads API** | Free | Real search volume, competition, bid data | ⭐ P0 |
     | **Google Analytics 4** | Free | Traffic source correlation with rankings | ⭐ P0 |
     | **Ahrefs API** | $99/mo | Backlink profiles, content gap, competitor analysis | ⭐ P1 |
-    | **RustySEO** | Free | Deep crawling, log analysis, AI audits — desktop app | ⭐ P1 |
+    | **RustySEO** | Free | Deep crawling, log analysis, AI audits - desktop app | ⭐ P1 |
     | **Moz API** | $49/mo | Domain Authority, Spam Score | P2 |
     | **DataForSEO API** | Pay/use | Live SERP data, rank tracking, backlinks | P2 |
     | **BabyLoveGrowth.ai** | Paid | Full GEO automation, AI visibility, Reddit agent | P2 |

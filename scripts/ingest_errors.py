@@ -1,4 +1,4 @@
-"""On-Page Error Ingestion — import error data from JSON/CSV into the SEO dashboard DB.
+"""On-Page Error Ingestion - import error data from JSON/CSV into the SEO dashboard DB.
 
 Usage:
     python scripts/ingest_errors.py --json data/sample_onpage_errors.json
@@ -106,7 +106,7 @@ def ensure_domain(conn, domain_id: int | None, domain_name: str | None) -> int:
         ).fetchone()
         if row:
             return row["id"]
-        raise ValueError(f"Domain '{domain_name}' not found — available: ...")
+        raise ValueError(f"Domain '{domain_name}' not found - available: ...")
 
     # Auto-detect if only one active domain
     rows = conn.execute("SELECT id, name FROM domains WHERE is_active=1").fetchall()

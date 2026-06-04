@@ -1,4 +1,4 @@
-"""Content Idea Ingestion — import content idea backlog from CSV into the SEO dashboard DB.
+"""Content Idea Ingestion - import content idea backlog from CSV into the SEO dashboard DB.
 
 Usage:
     python scripts/ingest_content.py --csv data/sample_content_ideas.csv

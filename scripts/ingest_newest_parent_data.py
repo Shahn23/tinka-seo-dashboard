@@ -3,7 +3,7 @@ Ingest the 4 newest parent task outputs into the SEO Dashboard SQLite DB:
   1. 30 new keyword ideas (t_ef192cc9 → data/new_keyword_ideas_v2.csv)
   2. 12 blog topics + 10 city templates (t_ef18bf76 → data/blog_post_topics_from_new_keywords_v2.md)
   3. Latest ranking data (t_1748c9c1 → data/current_keyword_rankings.csv)
-  4. On-page audit data (t_3d7da6d3) — already ingested via earlier run (47 open)
+  4. On-page audit data (t_3d7da6d3) - already ingested via earlier run (47 open)
 
 Usage: python scripts/ingest_newest_parent_data.py
 """
@@ -256,7 +256,7 @@ def ingest_blog_topics():
     with open(md_path, encoding="utf-8") as f:
         content = f.read()
 
-    # Parse topics — each starts with "## <N>. <Title>"
+    # Parse topics - each starts with "## <N>. <Title>"
     topic_blocks = re.split(r"\n##\s+", content)
     topics = []
     for block in topic_blocks:
@@ -353,9 +353,9 @@ def ingest_blog_topics():
             }
         )
 
-    # Also add 10 city template topics — these were described in the parent task output
+    # Also add 10 city template topics - these were described in the parent task output
     city_templates = [
-        {"title": f"Giant Bubbles in {city} — The Ultimate Local Guide", "city": city, "market": market}
+        {"title": f"Giant Bubbles in {city} - The Ultimate Local Guide", "city": city, "market": market}
         for city, market in [
             ("Rotorua", "nz"),
             ("New Plymouth", "nz"),

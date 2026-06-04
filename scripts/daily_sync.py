@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily SEO Data Sync — orchestrates all 3 ingestion modules.
+"""Daily SEO Data Sync - orchestrates all 3 ingestion modules.
 
 Runs GSC rankings sync, on-page error ingestion, and content idea
 import in sequence. Logs to sync_log table and stdout.
@@ -17,7 +17,7 @@ from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s %(name)s — %(message)s",
+    format="[%(asctime)s] %(levelname)s %(name)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("daily-sync")
@@ -176,7 +176,7 @@ def run_error_ingest(dry_run: bool = False, force: bool = False) -> dict:
         domain_file = find_data_file(f"errors_{domain['name'].split('.')[0]}.json", f"errors_{domain['name']}.json")
         file_to_use = domain_file or source_file
         if not file_to_use:
-            log.warning(f"No error data file for {domain['name']} — skipping")
+            log.warning(f"No error data file for {domain['name']} - skipping")
             continue
 
         cmd = [sys.executable, script, "--json", file_to_use, "--domain-id", str(domain["id"])]
@@ -225,7 +225,7 @@ def run_content_ingest(dry_run: bool = False, force: bool = False) -> dict:
         "sample_content_ideas.csv", "content_ideas.csv", "backlog.csv", "sample_backlog.csv"
     )
     if not source_file:
-        log.warning("No content idea data file found — skipping")
+        log.warning("No content idea data file found - skipping")
         return {"source": "content", "status": "skipped_no_data", "rows": 0}
 
     sync_id = log_sync_start("content")
@@ -320,8 +320,8 @@ def run_rank_report() -> dict:
     unranked = total - ranked
     log.info(f"Keywords: {total} total, {ranked} ranked ({ranked/total*100:.0f}%), {unranked} unranked")
     log.info(f"Avg position: {avg_pos:.1f}")
-    log.info(f"7-day change: {rising} ↑, {falling} ↓, {stable} —, {new_entrants} new")
-    log.info("Rank Tracker Report — complete")
+    log.info(f"7-day change: {rising} ↑, {falling} ↓, {stable} -, {new_entrants} new")
+    log.info("Rank Tracker Report - complete")
 
     return {"source": "rank_tracker", "status": "success",
             "rows": total, "metadata": f"{ranked}/{total} ranked, avg {avg_pos:.1f}, {rising}↑/{falling}↓"}
@@ -333,7 +333,7 @@ def run_rank_report() -> dict:
 def run_all(live: bool, days: int, dry_run: bool, force: bool, gsc_only: bool):
     """Run all three ingestion modules and report results."""
     log.info("=" * 55)
-    log.info(f"  DAILY SYNC — {'LIVE' if live else 'DRY-RUN'}" +
+    log.info(f"  DAILY SYNC - {'LIVE' if live else 'DRY-RUN'}" +
              (" (FORCE)" if force else "") +
              (" (GSC ONLY)" if gsc_only else ""))
     log.info(f"  Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

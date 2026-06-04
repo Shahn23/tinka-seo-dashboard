@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rank Tracker — analyzes GSC position data for changes, trends, and gap analysis.
+"""Rank Tracker - analyzes GSC position data for changes, trends, and gap analysis.
 
 Produces a structured report showing:
 - Keywords with position changes (up, down, new entrants, lost rankings)
@@ -27,7 +27,7 @@ from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s %(name)s — %(message)s",
+    format="[%(asctime)s] %(levelname)s %(name)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("rank-tracker")
@@ -327,7 +327,7 @@ def main():
     # Human-readable output
     s = report["summary"]
     print("=" * 60)
-    print(f"  KEYWORD RANK TRACKER — {report['generated_at'][:10]}")
+    print(f"  KEYWORD RANK TRACKER - {report['generated_at'][:10]}")
     print(f"  Period: {report['date_range_7d']}")
     print("=" * 60)
     print(f"\n📊 OVERVIEW")
@@ -338,13 +338,13 @@ def main():
     print(f"\n🔄 7-DAY CHANGES")
     print(f"  Rising:   ▲ {s['rising']}")
     print(f"  Falling:  ▼ {s['falling']}")
-    print(f"  Stable:   — {s['stable']}")
+    print(f"  Stable:   - {s['stable']}")
     print(f"  New:      ✨ {s['new_entrants']}")
     print(f"  Lost:     💀 {s['lost_rankings']}")
 
     print(f"\n🌐 BY DOMAIN")
     for name, info in report["by_domain"].items():
-        arrow = "▲" if info["rising"] > info["falling"] else ("▼" if info["falling"] > info["rising"] else "—")
+        arrow = "▲" if info["rising"] > info["falling"] else ("▼" if info["falling"] > info["rising"] else "-")
         print(f"  {name}:")
         print(f"    Tracked: {info['total']} | Ranked: {info['ranked']} | Unranked: {info['unranked']}")
         print(f"    Avg Pos: {info['avg_position'] or 'N/A'} | {arrow} {info['rising']}↑ {info['falling']}↓ {info['new']}✨")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Article Writer v0.4 — Tinka SEO Dashboard Content Pipeline
+Article Writer v0.4 - Tinka SEO Dashboard Content Pipeline
 
 Generates SEO-optimized articles from content ideas, posts to Shopify as drafts,
 and tracks everything in the dashboard DB.

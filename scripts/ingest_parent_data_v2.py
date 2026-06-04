@@ -2,9 +2,9 @@
 """Ingest data from parent tasks t_0136a7e9, t_527133fe, t_fe4a7118, t_6d72ac1e.
 
 Integrates:
-1.  On-page SEO audit (73 errors per site) — from t_0136a7e9
-2.  NZ ranking data (10 keywords, 7 ranked) — from t_527133fe
-3.  AU ranking data (57 keywords, 18 ranked) — from t_fe4a7118
+1.  On-page SEO audit (73 errors per site) - from t_0136a7e9
+2.  NZ ranking data (10 keywords, 7 ranked) - from t_527133fe
+3.  AU ranking data (57 keywords, 18 ranked) - from t_fe4a7118
 4.  Already-imported: 25 new keywords + 10 blog topics from t_6d72ac1e
 
 Usage:
@@ -254,7 +254,7 @@ def ingest_rankings(dry_run: bool) -> dict:
         ).fetchone()
 
         if not kw_row:
-            log.warning(f"  NZ keyword not found in DB: '{keyword}' — skipping")
+            log.warning(f"  NZ keyword not found in DB: '{keyword}' - skipping")
             skipped += 1
             continue
 
@@ -290,7 +290,7 @@ def ingest_rankings(dry_run: bool) -> dict:
         ).fetchone()
 
         if not kw_row:
-            log.warning(f"  AU keyword not found in DB: '{keyword}' — skipping")
+            log.warning(f"  AU keyword not found in DB: '{keyword}' - skipping")
             skipped += 1
             continue
 
