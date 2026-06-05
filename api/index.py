@@ -27,7 +27,7 @@ if not DB_PATH.exists():
     conn.execute("PRAGMA temp_store=MEMORY")
     conn.close()
 
-app = FastAPI(title="Tinka SEO Dashboard v0.6 - All Data Integrated")
+app = FastAPI(title="Tinka SEO Dashboard v0.8 - Live Data with Recommendations")
 
 def get_conn():
     conn = sqlite3.connect(str(DB_PATH))
@@ -602,7 +602,7 @@ def render_settings(ctx):
     parts.append('</div><h3>📁 Dashboard Info</h3><div class="status-box">')
     parts.append('<p>📍 <strong>App:</strong> tinka-seo-dashboard.vercel.app</p>')
     parts.append('<p>🗄️ <strong>Data:</strong> SQLite, auto-refreshes every 60s</p>')
-    parts.append(f'<p>🏷️ <strong>Version:</strong> v0.7 - Full 9-Tab Dashboard</p>')
+    parts.append(f'<p>🏷️ <strong>Version:</strong> v0.8 - Live Data with Recommendations</p>')
     parts.append('</div></div></div>')
 
     if sync_hist:

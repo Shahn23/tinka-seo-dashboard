@@ -1,155 +1,188 @@
-Domain,Keyword,Category,Intent,Volume,Opportunity_Score,Difficulty,Current_Position,Rank_Status,Change_7d,Clicks,Impressions,Last_Checked,Priority
-giantbubbles.co.nz,Wholesale Bubbles NZ,b2b,commercial,70,8.0,15,3.5,Ranked,▲ +3.1,12,95,2026-06-02,
-giantbubbles.co.nz,Giant Bubbles NZ,brand_general,informational,260,7.5,30,4.1,Ranked,Stable,15,320,2026-06-02,
-giantbubbles.co.nz,Party Bubbles Auckland,party,commercial,170,8.0,30,5.7,Ranked,▼ -0.8,49,134,2026-03-04,
-giantbubbles.co.nz,Bubble Entertainer Auckland,local,commercial,140,8.5,25,6.2,Ranked,▼ -2.1,48,129,2026-03-04,High
-giantbubbles.co.nz,Giant Bubble Kit NZ,product,commercial,320,8.5,40,6.6,Ranked,▼ -1.7,8,210,2026-06-02,High
-giantbubbles.co.nz,Giant Bubble Wand NZ,product,commercial,210,8.0,35,6.6,Ranked,▼ -1.6,5,140,2026-06-02,High
-giantbubbles.co.nz,Bubble Solution NZ,product,commercial,90,7.5,35,7.2,Ranked,▼ -1.2,3,60,2026-06-02,
-giantbubbles.co.nz,Christmas Gift for Kids NZ,seasonal,commercial,590,6.5,55,,Unranked,No data,,,,
-giantbubbles.co.nz,Bubble Wand,product,commercial,480,6.5,60,,Unranked,No data,,,,
-giantbubbles.co.nz,Kids Birthday Party Auckland,local,commercial,390,7.0,45,,Unranked,No data,,,,
-giantbubbles.co.nz,Rainy Day Activities for Kids NZ,kids,informational,390,7.5,35,,Unranked,No data,,,,
-giantbubbles.co.nz,Easter Basket Ideas NZ,seasonal,commercial,320,8.5,30,,Unranked,No data,,,,High
-giantbubbles.co.nz,How to Make Bubble Wands,content,informational,320,7.5,30,,Unranked,No data,,,,
-giantbubbles.co.nz,Summer Activities for Kids NZ,kids,informational,320,7.5,30,,Unranked,No data,,,,
-giantbubbles.co.nz,Summer Holiday Fun for Kids NZ,seasonal,,320,7.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,DIY Giant Bubble Wands,content,informational,260,8.0,25,,Unranked,No data,,,,High
-giantbubbles.co.nz,School Holiday Activities Auckland,local,informational,260,7.5,25,,Unranked,No data,,,,
-giantbubbles.co.nz,Screen Free Activities for Kids NZ,kids,informational,260,8.0,25,,Unranked,No data,,,,High
-giantbubbles.co.nz,Screen Free Summer Activities NZ,content,,260,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Best Giant Bubble Kit NZ,product,commercial,210,8.5,40,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Painting for Kids,content,informational,210,8.5,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Easter Gifts for Kids NZ,seasonal,commercial,210,8.0,25,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubble Art,content,informational,210,7.5,25,,Unranked,No data,,,,
-giantbubbles.co.nz,Matariki Activities for Families NZ,seasonal,,210,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Tinka Giant Bubbles,brand_general,navigational,210,9.0,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Backyard Obstacle Course for Kids NZ,content,,170,7.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Best Bubbles for Toddlers NZ,kids,,170,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Bubble Art for Kids,content,informational,170,8.0,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Experience Gifts for Kids NZ,seasonal,commercial,170,8.0,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles For Kids NZ,kids,commercial,170,7.5,35,,Unranked,No data,,,,
-giantbubbles.co.nz,How to Make Giant Bubbles NZ,content,informational,170,8.5,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Wedding Bubble Send Off NZ,wedding,,170,8.5,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Bubble Activities for Toddlers NZ,kids,informational,140,8.0,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubble Concentrate New Zealand,product,commercial,140,8.0,30,,Unranked,No data,,,,High
-giantbubbles.co.nz,Outdoor Montessori Activities NZ,content,,140,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,School Holiday Activities Christchurch,local,informational,140,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Waitangi Day Family Activities NZ,seasonal,,140,7.5,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles Wellington,local,commercial,110,8.5,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubble Solution Recipe NZ,content,informational,100,8.0,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Christchurch,local,commercial,100,8.5,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Pour n Play Bubble Juice NZ,product,commercial,100,8.5,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Photography Tips,content,informational,90,8.5,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Party Hire Auckland,local,commercial,90,7.0,25,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles Queenstown,product,commercial,90,14.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,People in a Bubble Wand NZ,product,commercial,90,8.5,20,,Unranked,No data,,,,High
-giantbubbles.co.nz,Eco Friendly Bubbles NZ,content,informational,80,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Entertainer Christchurch,local,commercial,70,8.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Performer Auckland,b2b,commercial,70,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubble Entertainer Hire NZ,b2b,commercial,70,14.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Dunedin,product,commercial,70,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Windy Day Wand NZ,product,commercial,70,8.5,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Entertainer Wellington,b2b,commercial,60,13.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bubble Workshop NZ,product,commercial,60,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Hamilton NZ,local,commercial,60,8.0,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Tauranga,product,commercial,60,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles for Babies NZ,content,informational,60,12.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Bulk Bubble Solution NZ,b2b,commercial,50,8.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Napier,product,commercial,50,14.0,15,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Nelson,local,commercial,50,13.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Rotorua,local,commercial,50,14.0,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Taupo,local,,50,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Bubble Entertainer Hamilton,b2b,commercial,40,12.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Hastings,local,commercial,40,13.0,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles New Plymouth,local,commercial,40,13.5,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Palmerston North,local,commercial,40,13.0,10,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Wanaka,local,,40,8.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles Whangarei,local,,40,7.5,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles for Schools NZ,b2b,commercial,40,8.0,5,,Unranked,No data,,,,High
-giantbubbles.co.nz,Giant Bubbles Blenheim,local,,30,7.0,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles Invercargill,local,,30,7.5,50,,Unranked,No data,,,,
-giantbubbles.co.nz,Giant Bubbles Timaru,local,,30,7.0,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles For Kids,kids,informational,390,8.0,35,3.2,Ranked,▲ +4.4,22,480,2026-06-02,High
-giantbubblesau.com,Wholesale Giant Bubbles,b2b,commercial,110,8.5,20,3.5,Ranked,▼ -0.7,10,180,2026-06-02,High
-giantbubblesau.com,Giant Bubble Wedding,content,informational,210,7.5,40,3.8,Ranked,▼ -0.6,70,0,2026-03-04,
-giantbubblesau.com,Giant Bubble Concentrate,product,commercial,140,7.0,45,3.8,Ranked,▲ +4.9,0,64,2026-03-04,
-giantbubblesau.com,Giant Bubble Kit,product,commercial,590,8.5,45,4.0,Ranked,▼ -2.0,18,410,2026-06-02,High
-giantbubblesau.com,Giant Bubbles Australia,brand_general,commercial,480,8.0,40,4.2,Ranked,New entrant,14,300,2026-06-02,High
-giantbubblesau.com,Bubble Solution Recipe,content,informational,590,8.0,35,4.5,Ranked,▲ +1.7,8,195,2026-06-02,High
-giantbubblesau.com,How To Make Giant Bubbles,content,informational,720,9.0,30,4.6,Ranked,▼ -2.4,24,256,2026-03-04,High
-giantbubblesau.com,Bubble Entertainer,b2b,commercial,90,8.0,25,4.9,Ranked,▲ +1.6,47,87,2026-03-04,High
-giantbubblesau.com,Birthday Party Bubbles,party,commercial,390,8.5,40,5.0,Ranked,▼ -2.6,9,210,2026-06-02,High
-giantbubblesau.com,Outdoor Toys Australia,product,commercial,480,7.0,60,5.4,Ranked,▲ +2.6,22,153,2026-03-04,
-giantbubblesau.com,Bubble Machine Australia,product,commercial,210,7.0,35,5.8,Ranked,New entrant,4,90,2026-06-02,
-giantbubblesau.com,Party Bubble Machine,product,commercial,170,6.5,30,6.0,Ranked,New entrant,3,75,2026-06-02,
-giantbubblesau.com,Best Bubble Solution,product,commercial,320,8.0,55,6.2,Ranked,▲ +1.3,17,442,2026-03-04,High
-giantbubblesau.com,Bubble Solution Australia,product,commercial,260,7.5,35,6.2,Ranked,New entrant,5,110,2026-06-02,
-giantbubblesau.com,Party Entertainment Auckland,local,commercial,110,8.5,30,6.4,Ranked,▼ -0.6,28,131,2026-03-04,High
-giantbubblesau.com,Kids Bubble Machine,product,commercial,140,6.0,30,6.5,Ranked,New entrant,2,55,2026-06-02,
-giantbubblesau.com,Bubble Wand For Kids,kids,commercial,260,7.5,40,6.7,Ranked,▲ +1.2,28,65,2026-03-04,
-giantbubblesau.com,Giant Bubbles Birthday Party Australia,party,commercial,140,8.5,25,6.8,Ranked,New entrant,3,65,2026-06-02,High
-giantbubblesau.com,Bubble Wand Pack,product,commercial,90,5.5,25,7.0,Ranked,New entrant,1,30,2026-06-02,
-giantbubblesau.com,Bubble Machine For Parties,product,commercial,140,6.5,30,7.5,Ranked,New entrant,2,40,2026-06-02,
-giantbubblesau.com,Kids Outdoor Activities,kids,informational,880,7.0,30,8.3,Ranked,▼ -1.6,21,240,2026-03-04,
-giantbubblesau.com,Giant Bubble Wand Australia,product,commercial,170,7.5,50,8.4,Ranked,▲ +0.6,1,20,2026-06-02,
-giantbubblesau.com,Warehouse Bubble Wand,product,commercial,170,7.5,50,8.9,Ranked,▼ -0.9,9,219,2026-03-04,
-giantbubblesau.com,Giant Bubbles For Dogs,kids,informational,140,6.5,25,9.8,Ranked,▼ -2.9,19,455,2026-03-04,
-giantbubblesau.com,Easter Basket Ideas Australia,seasonal,commercial,480,7.5,35,,Unranked,No data,,,,
-giantbubblesau.com,Outdoor Activities for Kids Australia,kids,informational,480,7.0,40,,Unranked,No data,,,,
-giantbubblesau.com,Bubble Wand Australia,product,commercial,390,7.5,55,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles Party Ideas,content,informational,390,7.5,35,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles for Parties,party,,320,7.5,50,,Unranked,No data,,,,
-giantbubblesau.com,How to Make Giant Bubbles With Corn Syrup,content,informational,320,8.5,25,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Experiment for Kids,kids,informational,260,8.0,25,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Science Experiments for Kids,content,,260,7.5,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubble Science Experiment,content,informational,260,7.5,20,,Unranked,No data,,,,
-giantbubblesau.com,Party Bubbles Australia,party,commercial,260,7.5,40,,Unranked,No data,,,,
-giantbubblesau.com,Best Giant Bubble Recipe Australia,content,informational,210,8.5,25,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubble Concentrate Australia,product,commercial,210,8.0,40,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Melbourne,local,commercial,210,8.0,30,,Unranked,No data,,,,High
-giantbubblesau.com,Non Toxic Giant Bubbles,product,commercial,210,8.0,30,,Unranked,No data,,,,High
-giantbubblesau.com,Wedding Bubble Exit Australia,wedding,,210,8.5,50,,Unranked,No data,,,,
-giantbubblesau.com,Bubble Party Favors Australia,product,commercial,170,11.0,35,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Sydney,local,commercial,170,8.5,25,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles for Toddlers,kids,commercial,170,8.0,20,,Unranked,No data,,,,High
-giantbubblesau.com,How to Make Giant Bubbles with Glycerin,content,informational,170,8.5,20,,Unranked,No data,,,,High
-giantbubblesau.com,Pour n Play Giant Bubble Juice,product,commercial,170,8.0,35,,Unranked,No data,,,,High
-giantbubblesau.com,Sensory Bubbles for Autism,sensory,,170,8.5,50,,Unranked,No data,,,,
-giantbubblesau.com,Eco Friendly Bubble Solution,content,informational,140,11.0,35,,Unranked,No data,,,,High
-giantbubblesau.com,Eco Friendly Kids Birthday Party Activities,sustainable,,140,8.0,50,,Unranked,No data,,,,
-giantbubblesau.com,People in a Bubble Wand,product,commercial,140,8.5,25,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Brisbane,local,commercial,130,8.5,20,,Unranked,No data,,,,High
-giantbubblesau.com,Non Toxic Bubbles for Babies,content,informational,130,12.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Send Off Wedding Sign,signing,,110,7.5,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubble Instructions AU,content,informational,110,10.0,15,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubble Maker Australia,content,informational,110,12.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubble Photography Tips,content,informational,110,7.5,15,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles Perth,local,commercial,110,8.5,20,,Unranked,No data,,,,High
-giantbubblesau.com,Windy Day Bubble Wand,product,commercial,110,8.5,20,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Adelaide,product,commercial,100,14.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Gold Coast,local,commercial,100,8.5,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Entertainer Adelaide,b2b,commercial,90,14.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Entertainment Melbourne,local,commercial,90,8.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Festival Brisbane,local,informational,90,12.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Performer Sydney,b2b,commercial,90,12.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubble Entertainer Hire Australia,local,commercial,90,8.5,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Keep Popping,untracked,commercial,90,10.0,15,,Unranked,No data,,,,
-giantbubblesau.com,Wholesale Bubble Solution Australia,b2b,commercial,90,8.5,20,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Newcastle,local,commercial,80,13.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Sunshine Coast,local,commercial,80,13.5,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bubble Workshop for Kids Australia,product,commercial,70,12.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Bulk Bubble Concentrate Australia,b2b,commercial,70,8.5,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Cairns,local,commercial,70,13.5,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Canberra,product,commercial,70,14.0,15,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Geelong,local,,70,8.0,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubble Gift Card Australia,product,commercial,60,7.5,15,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles Hobart,local,commercial,60,14.0,10,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Townsville,local,,60,8.0,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles for Schools Australia,b2b,commercial,60,8.0,10,,Unranked,No data,,,,High
-giantbubblesau.com,Bio-Grade Bubble Solution Australia,product,commercial,50,8.0,10,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubble Solution Shelf Life,content,informational,50,9.0,10,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Ballarat,local,,50,7.5,50,,Unranked,No data,,,,
-giantbubblesau.com,Giant Bubbles Darwin,local,commercial,50,14.0,10,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Wollongong,local,commercial,50,13.5,10,,Unranked,No data,,,,High
-giantbubblesau.com,Giant Bubbles Launceston,local,,40,7.5,50,,Unranked,No data,,,,
+domain,keyword,category,intent,volume,opportunity_score,difficulty,is_high_priority,data_points,current_position,first_position,latest_date,first_date,rank_status,clicks,impressions,ctr,7d_change,14d_change,30d_change,trend_7d
+giantbubbles.co.nz,Backyard Bubble Party Ideas,Content,informational,170,7.5,20,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Backyard Obstacle Course for Kids NZ,content,,170,7.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bee Safe Bubble Solution,Pets/Safety,commercial,70,8.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Best Bubbles for Toddlers NZ,kids,,170,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Best Giant Bubble Kit NZ,product,commercial,210,8.5,40,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Best Giant Bubble Product,Comparison/Review,commercial,320,7.5,40,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Activities for Toddlers NZ,kids,informational,140,8.0,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Art for Kids,content,informational,170,8.0,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Entertainer Auckland,local,commercial,140,8.5,25,True,90,5.9,6.2,2026-06-01,2026-03-04,Ranked #5.9,88,256,0.3438,0.8,0.2,-1.3,stable
+giantbubbles.co.nz,Bubble Entertainer Christchurch,local,commercial,70,8.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Entertainer Hamilton,b2b,commercial,40,12.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Entertainer Wellington,b2b,commercial,60,13.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Painting for Kids,content,informational,210,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Performer Auckland,b2b,commercial,70,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Photography Tips,content,informational,90,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Solution NZ,product,commercial,90,7.5,35,False,91,7.2,7.8,2026-06-02,2026-03-04,Ranked #7.2,3,60,0.05,-1.7,2.2,1.0,rising
+giantbubbles.co.nz,Bubble Wand,product,commercial,480,6.5,60,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bubble Workshop NZ,product,commercial,60,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Bulk Bubble Solution NZ,b2b,commercial,50,8.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Christmas Gift for Kids NZ,seasonal,commercial,590,6.5,55,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Corporate Event Giant Bubbles,B2B/Corporate,commercial,60,8.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,DIY Giant Bubble Wands,content,informational,260,8.0,25,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Easter Basket Ideas NZ,seasonal,commercial,320,8.5,30,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Easter Gifts for Kids NZ,seasonal,commercial,210,8.0,25,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Eco Friendly Bubbles NZ,content,informational,80,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Experience Gifts for Kids NZ,seasonal,commercial,170,8.0,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Family Outdoor Activities NZ,Parenting,informational,260,7.5,30,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Art,content,informational,210,7.5,25,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Birthday Gift,Gift,commercial,110,8.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Concentrate Gift Set,Gift/Product,commercial,60,8.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Concentrate New Zealand,product,commercial,140,8.0,30,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Entertainer Hire NZ,b2b,commercial,70,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Fundraiser,B2B/Community,commercial,70,8.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Hire NZ,Rental/Service,commercial,90,8.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Kit NZ,product,commercial,320,8.5,40,True,91,6.6,3.9,2026-06-02,2026-03-04,Ranked #6.6,8,210,0.0380952380952381,-0.2,2.1,1.1,stable
+giantbubbles.co.nz,Giant Bubble Kit for Adults,Product,commercial,90,8.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Kit for Teenagers,Product,commercial,60,7.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Kiwi Made,Brand,commercial,50,8.5,5,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Making Competition,Content/Events,informational,50,7.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Photography Auckland,Photography/Local,commercial,40,8.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Refill Bulk NZ,Product/B2B,commercial,40,8.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Solution Recipe NZ,content,informational,100,8.0,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Solution Refill NZ,Product,commercial,140,9.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Video Tutorial,Content,informational,210,8.0,20,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Wand NZ,product,commercial,210,8.0,35,True,91,6.6,5.1,2026-06-02,2026-03-04,Ranked #6.6,5,140,0.03571428571428571,0.5,-1.3,3.5,stable
+giantbubbles.co.nz,Giant Bubble Wand Replacement,Product,commercial,90,8.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble Workshop,B2B/Schools,commercial,60,8.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble World Record,Content/Viral,informational,140,7.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubble vs Regular Bubbles,Content,informational,110,7.5,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Blenheim,local,,30,7.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Christchurch,local,commercial,100,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Dunedin,product,commercial,70,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles For Kids NZ,kids,commercial,170,7.5,35,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Hamilton NZ,local,commercial,60,8.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Hastings,local,commercial,40,13.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Invercargill,local,,30,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles NZ,brand_general,informational,260,7.5,30,False,91,4.1,5.5,2026-06-02,2026-03-04,Ranked #4.1,15,320,0.046875,-1.7,-0.9,-2.2,rising
+giantbubbles.co.nz,Giant Bubbles Napier,product,commercial,50,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Nelson,local,commercial,50,13.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles New Plymouth,local,commercial,40,13.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Palmerston North,local,commercial,40,13.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Party Hire Auckland,local,commercial,90,7.0,25,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Queenstown,product,commercial,90,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Rotorua,local,commercial,50,14.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Taupo,local,,50,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Tauranga,product,commercial,60,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Timaru,local,,30,7.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Wanaka,local,,40,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Wellington,local,commercial,110,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles Whangarei,local,,40,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles for Babies NZ,content,informational,60,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles for Schools NZ,b2b,commercial,40,8.0,5,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Giant Bubbles in Winter,Content/Seasonal,informational,70,7.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,How Do Giant Bubbles Work,Content/Educational,informational,170,8.0,20,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,How to Clean Up Giant Bubbles,Content/Practical,informational,90,7.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,How to Make Bubble Wands,content,informational,320,7.5,30,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,How to Make Giant Bubbles NZ,content,informational,170,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Kids Birthday Party Auckland,local,commercial,390,7.0,45,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Matariki Activities for Families NZ,seasonal,,210,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Outdoor Montessori Activities NZ,content,,140,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Party Bubbles Auckland,party,commercial,170,8.0,30,False,90,5.9,5.7,2026-06-01,2026-03-04,Ranked #5.9,48,235,0.2043,-1.5,-1.0,2.4,rising
+giantbubbles.co.nz,People in a Bubble Wand NZ,product,commercial,90,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Pour n Play Bubble Juice NZ,product,commercial,100,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Rainy Day Activities for Kids NZ,kids,informational,390,7.5,35,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,School Fair Bubble Stall,B2B/Community,commercial,50,8.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,School Holiday Activities Auckland,local,informational,260,7.5,25,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,School Holiday Activities Christchurch,local,informational,140,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Screen Free Activities for Kids NZ,kids,informational,260,8.0,25,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Screen Free Summer Activities NZ,content,,260,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Summer Activities for Kids NZ,kids,informational,320,7.5,30,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Summer Holiday Fun for Kids NZ,seasonal,,320,7.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Surface Tension Bubble Experiment Kids,Educational/STEM,informational,140,7.5,15,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Tinka Giant Bubble Review,Brand,commercial,90,8.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Tinka Giant Bubbles,brand_general,navigational,210,9.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Unique Gift for Kids Who Love Outdoors NZ,Gift,commercial,90,8.0,10,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Waitangi Day Family Activities NZ,seasonal,,140,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Wedding Bubble Send Off NZ,wedding,,170,8.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubbles.co.nz,Wholesale Bubbles NZ,b2b,commercial,70,8.0,15,False,91,3.5,6.4,2026-06-02,2026-03-04,Ranked #3.5,12,95,0.12631578947368421,-1.1,-1.4,0.3,rising
+giantbubbles.co.nz,Windy Day Wand NZ,product,commercial,70,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Best Bubble Solution,product,commercial,320,8.0,55,True,90,4.7,6.2,2026-06-01,2026-03-04,Ranked #4.7,0,155,0.0,-0.4,1.8,1.2,stable
+giantbubblesau.com,Best Giant Bubble Recipe Australia,content,informational,210,8.5,25,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bio-Grade Bubble Solution Australia,product,commercial,50,8.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Birthday Party Bubbles,party,commercial,390,8.5,40,True,91,5.0,3.9,2026-06-02,2026-03-04,Ranked #5.0,9,210,0.04285714285714286,-1.5,-1.2,1.9,rising
+giantbubblesau.com,Bubble Entertainer,b2b,commercial,90,8.0,25,True,90,7.0,4.9,2026-06-01,2026-03-04,Ranked #7.0,8,238,0.0336,4.6,1.8,1.1,falling
+giantbubblesau.com,Bubble Entertainer Adelaide,b2b,commercial,90,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Entertainment Melbourne,local,commercial,90,8.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Experiment for Kids,kids,informational,260,8.0,25,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Festival Brisbane,local,informational,90,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Machine Australia,product,commercial,210,7.0,35,False,1,5.8,5.8,2026-06-02,2026-06-02,Ranked #5.8,4,90,0.044444444444444446,,,,baseline
+giantbubblesau.com,Bubble Machine For Parties,product,commercial,140,6.5,30,False,1,7.5,7.5,2026-06-02,2026-06-02,Ranked #7.5,2,40,0.05,,,,baseline
+giantbubblesau.com,Bubble Party Favors Australia,product,commercial,170,11.0,35,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Performer Sydney,b2b,commercial,90,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Science Experiments for Kids,content,,260,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Send Off Wedding Sign,signing,,110,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Solution Australia,product,commercial,260,7.5,35,False,1,6.2,6.2,2026-06-02,2026-06-02,Ranked #6.2,5,110,0.045454545454545456,,,,baseline
+giantbubblesau.com,Bubble Solution Recipe,content,informational,590,8.0,35,True,91,4.5,6.0,2026-06-02,2026-03-04,Ranked #4.5,8,195,0.041025641025641026,-0.4,-3.1,0.5,stable
+giantbubblesau.com,Bubble Wand Australia,product,commercial,390,7.5,55,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bubble Wand For Kids,kids,commercial,260,7.5,40,False,90,5.7,6.7,2026-06-01,2026-03-04,Ranked #5.7,1,296,0.0034,1.9,2.4,-2.8,falling
+giantbubblesau.com,Bubble Wand Pack,product,commercial,90,5.5,25,False,1,7.0,7.0,2026-06-02,2026-06-02,Ranked #7.0,1,30,0.03333333333333333,,,,baseline
+giantbubblesau.com,Bubble Workshop for Kids Australia,product,commercial,70,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Bulk Bubble Concentrate Australia,b2b,commercial,70,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Easter Basket Ideas Australia,seasonal,commercial,480,7.5,35,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Eco Friendly Bubble Solution,content,informational,140,11.0,35,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Eco Friendly Kids Birthday Party Activities,sustainable,,140,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Concentrate,product,commercial,140,7.0,45,False,90,4.2,3.8,2026-06-01,2026-03-04,Ranked #4.2,0,128,0.0,0.1,-2.4,-0.6,stable
+giantbubblesau.com,Giant Bubble Concentrate Australia,product,commercial,210,8.0,40,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Entertainer Hire Australia,local,commercial,90,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Gift Card Australia,product,commercial,60,7.5,15,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Instructions AU,content,informational,110,10.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Kit,product,commercial,590,8.5,45,True,91,4.0,7.7,2026-06-02,2026-03-04,Ranked #4.0,18,410,0.04390243902439024,-2.7,-1.3,-0.9,rising
+giantbubblesau.com,Giant Bubble Maker Australia,content,informational,110,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Photography Sydney,Photography/Local,commercial,50,8.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Photography Tips,content,informational,110,7.5,15,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Science Experiment,content,informational,260,7.5,20,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Solution Refill Australia,Product,commercial,170,8.5,20,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Solution Shelf Life,content,informational,50,9.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubble Wand Australia,product,commercial,170,7.5,50,False,91,8.4,7.8,2026-06-02,2026-03-04,Ranked #8.4,1,20,0.05,2.0,4.9,4.2,falling
+giantbubblesau.com,Giant Bubble Wedding,content,informational,210,7.5,40,False,90,3.6,3.8,2026-06-01,2026-03-04,Ranked #3.6,31,194,0.1598,-0.4,-1.0,-1.9,stable
+giantbubblesau.com,Giant Bubbles Adelaide,product,commercial,100,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Australia,brand_general,commercial,480,8.0,40,True,1,4.2,4.2,2026-06-02,2026-06-02,Ranked #4.2,14,300,0.04666666666666667,,,,baseline
+giantbubblesau.com,Giant Bubbles Ballarat,local,,50,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Birthday Party Australia,party,commercial,140,8.5,25,True,1,6.8,6.8,2026-06-02,2026-06-02,Ranked #6.8,3,65,0.046153846153846156,,,,baseline
+giantbubblesau.com,Giant Bubbles Brisbane,local,commercial,130,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Cairns,local,commercial,70,13.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Canberra,product,commercial,70,14.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Darwin,local,commercial,50,14.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles For Dogs,kids,informational,140,6.5,25,False,90,5.9,9.8,2026-06-01,2026-03-04,Ranked #5.9,24,162,0.1481,-2.1,0.3,-4.0,rising
+giantbubblesau.com,Giant Bubbles For Kids,kids,informational,390,8.0,35,True,91,3.2,7.1,2026-06-02,2026-03-04,Ranked #3.2,22,480,0.04583333333333333,0.4,-4.1,-4.5,stable
+giantbubblesau.com,Giant Bubbles Geelong,local,,70,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Gold Coast,local,commercial,100,8.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Hobart,local,commercial,60,14.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Keep Popping,untracked,commercial,90,10.0,15,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Launceston,local,,40,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Melbourne,local,commercial,210,8.0,30,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Newcastle,local,commercial,80,13.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Party Ideas,content,informational,390,7.5,35,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Perth,local,commercial,110,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Sunshine Coast,local,commercial,80,13.5,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Sydney,local,commercial,170,8.5,25,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Townsville,local,,60,8.0,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles Wollongong,local,commercial,50,13.5,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles for Parties,party,,320,7.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles for Schools Australia,b2b,commercial,60,8.0,10,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Giant Bubbles for Toddlers,kids,commercial,170,8.0,20,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,How To Make Giant Bubbles,content,informational,720,9.0,30,True,90,4.2,4.6,2026-06-01,2026-03-04,Ranked #4.2,0,204,0.0,0.8,-1.3,0.2,stable
+giantbubblesau.com,How to Make Giant Bubbles With Corn Syrup,content,informational,320,8.5,25,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,How to Make Giant Bubbles with Glycerin,content,informational,170,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Kids Bubble Machine,product,commercial,140,6.0,30,False,1,6.5,6.5,2026-06-02,2026-06-02,Ranked #6.5,2,55,0.03636363636363636,,,,baseline
+giantbubblesau.com,Kids Outdoor Activities,kids,informational,880,7.0,30,False,90,6.3,8.3,2026-06-01,2026-03-04,Ranked #6.3,52,279,0.1864,-1.0,-2.9,-1.1,stable
+giantbubblesau.com,Marquee Event Bubbles,B2B/Events,commercial,40,7.5,5,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Non Toxic Bubbles for Babies,content,informational,130,12.0,15,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Non Toxic Giant Bubbles,product,commercial,210,8.0,30,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Outdoor Activities for Kids Australia,kids,informational,480,7.0,40,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Outdoor Toys Australia,product,commercial,480,7.0,60,False,90,6.5,5.4,2026-06-01,2026-03-04,Ranked #6.5,42,56,0.75,1.4,0.8,-0.3,falling
+giantbubblesau.com,Party Bubble Machine,product,commercial,170,6.5,30,False,1,6.0,6.0,2026-06-02,2026-06-02,Ranked #6.0,3,75,0.04,,,,baseline
+giantbubblesau.com,Party Bubbles Australia,party,commercial,260,7.5,40,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Party Entertainment Auckland,local,commercial,110,8.5,30,True,90,4.5,6.4,2026-06-01,2026-03-04,Ranked #4.5,31,258,0.1202,0.1,2.3,-3.3,stable
+giantbubblesau.com,People in a Bubble Wand,product,commercial,140,8.5,25,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Pet Friendly Bubble Solution Australia,Pets,commercial,50,8.0,5,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Pour n Play Giant Bubble Juice,product,commercial,170,8.0,35,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Sensory Bubbles for Autism,sensory,,170,8.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Tinka Giant Bubble Kit Australia,Brand,commercial,70,8.5,10,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Warehouse Bubble Wand,product,commercial,170,7.5,50,False,90,5.7,8.9,2026-06-01,2026-03-04,Ranked #5.7,38,290,0.131,2.0,-2.2,1.4,falling
+giantbubblesau.com,Wedding Bubble Exit Australia,wedding,,210,8.5,50,False,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Wholesale Bubble Solution Australia,b2b,commercial,90,8.5,20,True,0,,,,,No data,,,,,,,no_data
+giantbubblesau.com,Wholesale Giant Bubbles,b2b,commercial,110,8.5,20,True,91,3.5,7.1,2026-06-02,2026-03-04,Ranked #3.5,10,180,0.05555555555555555,-2.5,-0.9,-2.8,rising
+giantbubblesau.com,Windy Day Bubble Wand,product,commercial,110,8.5,20,True,0,,,,,No data,,,,,,,no_data
