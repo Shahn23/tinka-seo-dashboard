@@ -9,9 +9,16 @@ from collections import defaultdict
 from xml.sax.saxutils import escape as html_escape
 
 import plotly.graph_objects as go
-import plotly.express as px
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+
+# Import interactive action routes (relative import — Vercel bundles api/ as a
+# package because __init__.py is present, so the sibling module is .actions_routes)
+try:
+    from .actions_routes import router as actions_router
+except (ImportError, ValueError):
+    # Fallback for local dev / non-package contexts
+    from actions_routes import router as actions_router
 
 _THIS_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = _THIS_DIR.parent
@@ -19,15 +26,50 @@ _DB_SOURCE = _THIS_DIR / "seo_dashboard.db"
 if not _DB_SOURCE.exists():
     _DB_SOURCE = PROJECT_DIR / "data" / "seo_dashboard.db"
 DB_PATH = Path("/tmp") / "seo_dashboard.db"
-if not DB_PATH.exists():
+_DB_INIT_ERROR = None
+
+def _init_db():
+    """Copy bundled DB to /tmp (writable on Vercel) and set pragmas.
+    Logged to stderr so Vercel captures it in the function log."""
+    if DB_PATH.exists():
+        return
     import shutil
+    print(f"[init_db] DB source: {_DB_SOURCE} (exists={_DB_SOURCE.exists()})", flush=True)
+    if not _DB_SOURCE.exists():
+        raise FileNotFoundError(
+            f"Bundled DB not found at {_DB_SOURCE}. "
+            f"Check vercel.json includeFiles pattern."
+        )
     shutil.copy2(str(_DB_SOURCE), str(DB_PATH))
     conn = sqlite3.connect(str(DB_PATH))
     conn.execute("PRAGMA journal_mode=OFF")
     conn.execute("PRAGMA temp_store=MEMORY")
     conn.close()
+    print(f"[init_db] DB copied to {DB_PATH}", flush=True)
 
-app = FastAPI(title="Tinka SEO Dashboard v0.8 - Live Data with Recommendations")
+try:
+    _init_db()
+except Exception as _e:
+    import sys, traceback
+    print(f"[tinka-dashboard] DB init failed: {_e}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    _DB_INIT_ERROR = str(_e)
+
+app = FastAPI(title="Tinka SEO Dashboard v0.9 - Interactive Actions with Live Queue")
+app.include_router(actions_router)
+
+# Surface init failures as a 503 (instead of crashing the whole request with 500).
+# First-request cold starts hit this if /tmp was wiped or the bundled DB is bad.
+@app.middleware("http")
+async def _db_init_guard(request: Request, call_next):
+    if _DB_INIT_ERROR is not None and DB_PATH.exists() is False:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            {"error": "db_init_failed", "detail": _DB_INIT_ERROR,
+             "hint": "Check vercel.json includeFiles pattern for api/seo_dashboard.db"},
+            status_code=503,
+        )
+    return await call_next(request)
 
 def get_conn():
     conn = sqlite3.connect(str(DB_PATH))
@@ -218,6 +260,73 @@ h3{{font-size:15px;margin-bottom:12px;color:#ddd}}
 </div></div>
 <script>
 function switchTab(e,i){{document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(i).classList.add('active');e.currentTarget.classList.add('active');setTimeout(()=>{{document.getElementById(i).querySelectorAll('.js-plotly-plot').forEach(p=>Plotly.Plots.resize(p))}},100)}}
+
+// ── Interactive Action Helpers ──────────────────────────────────────────
+async function postAction(url, formData) {{
+    const btn = event?.target;
+    if (btn) {{ btn.disabled = true; btn.textContent = '⏳'; }}
+    try {{
+        const resp = await fetch(url, {{ method: 'POST', body: formData }});
+        const data = await resp.json();
+        showToast(data.message || data.status, data.status === 'queued' || data.status === 'ok' ? 'success' : 'error');
+        if (data.status === 'queued' || data.status === 'ok') {{
+            setTimeout(() => location.reload(), 1500);
+        }}
+    }} catch(e) {{
+        showToast('Network error: ' + e.message, 'error');
+    }} finally {{
+        if (btn) {{ btn.disabled = false; btn.textContent = btn.dataset.originalText || btn.textContent; }}
+    }}
+}}
+
+async function deleteItem(url) {{
+    if (!confirm('Delete this item? This cannot be undone.')) return;
+    const btn = event?.target;
+    if (btn) {{ btn.disabled = true; btn.textContent = '⏳'; }}
+    try {{
+        const resp = await fetch(url, {{ method: 'POST' }});
+        const data = await resp.json();
+        showToast(data.message, data.status === 'ok' ? 'success' : 'error');
+        if (data.status === 'ok') setTimeout(() => location.reload(), 1000);
+    }} catch(e) {{
+        showToast('Error: ' + e.message, 'error');
+    }} finally {{
+        if (btn) {{ btn.disabled = false; btn.textContent = '✕'; }}
+    }}
+}}
+
+async function markFixed(url) {{
+    const btn = event?.target;
+    if (btn) {{ btn.disabled = true; btn.textContent = '⏳'; }}
+    try {{
+        const resp = await fetch(url, {{ method: 'POST' }});
+        const data = await resp.json();
+        showToast(data.message, data.status === 'ok' ? 'success' : 'error');
+        if (data.status === 'ok') setTimeout(() => location.reload(), 1000);
+    }} catch(e) {{
+        showToast('Error: ' + e.message, 'error');
+    }} finally {{
+        if (btn) {{ btn.disabled = false; btn.textContent = '✅'; }}
+    }}
+}}
+
+function generateKeywords() {{ document.getElementById('kw-gen-form').submit(); }}
+function generateIdeas() {{ document.getElementById('idea-gen-form').submit(); }}
+
+// ── Toast Notification ──────────────────────────────────────────────────
+function showToast(msg, type) {{
+    const t = document.getElementById('toast') || (() => {{
+        const d = document.createElement('div');
+        d.id = 'toast'; d.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:14px 20px;border-radius:10px;font-weight:600;font-size:14px;max-width:400px;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+        document.body.appendChild(d);
+        return d;
+    }})();
+    t.style.background = type === 'success' ? '#004d2e' : type === 'error' ? '#4d002e' : '#1e2036';
+    t.style.color = type === 'success' ? '#00d4aa' : type === 'error' ? '#ff6b6b' : '#ccc';
+    t.style.border = type === 'success' ? '1px solid #00d4aa' : type === 'error' ? '1px solid #ff6b6b' : '1px solid #2a2d4a';
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => {{ t.style.opacity = '0'; }}, 5000);
+}}
 </script>
 </body>
 </html>"""
@@ -297,9 +406,10 @@ def render_keywords(ctx):
     parts.append('<h3>📋 All Keywords</h3>')
     kw_display = ctx.get("kw_display", [])
     if kw_display:
-        parts.append('<div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th>Domain</th><th>Keyword</th><th>Cat</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th><th>Pos</th><th>Clicks</th><th>Imp</th></tr></thead><tbody>')
+        parts.append('<div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Domain</th><th>Keyword</th><th>Cat</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th><th>Pos</th><th>Clicks</th><th>Imp</th></tr></thead><tbody>')
         for r in kw_display:
-            parts.append(f'<tr><td>{esc(r["Domain"])}</td><td style="font-weight:600">{esc(r["Keyword"])}</td><td>{esc(r["Category"])}</td><td>{esc(r.get("Intent",""))}</td><td>{r.get("Vol",0):,}</td><td>{r.get("Score","")}</td><td>{r.get("Diff","")}</td><td>{r.get("Pos","")}</td><td>{r.get("Clicks",0)}</td><td>{r.get("Imp",0):,}</td></tr>')
+            kw_id = r.get("Id", "")
+            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{kw_id}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button></td><td>{esc(r["Domain"])}</td><td style="font-weight:600">{esc(r["Keyword"])}</td><td>{esc(r["Category"])}</td><td>{esc(r.get("Intent",""))}</td><td>{r.get("Vol",0):,}</td><td>{r.get("Score","")}</td><td>{r.get("Diff","")}</td><td>{r.get("Pos","")}</td><td>{r.get("Clicks",0)}</td><td>{r.get("Imp",0):,}</td></tr>')
         parts.append('</tbody></table></div>')
     else:
         parts.append('<p style="color:#888">No keywords match filters.</p>')
@@ -314,8 +424,31 @@ def render_new_keywords(ctx):
 
     m = ctx["newkw_metrics"]
     picks = ctx.get("newkw_picks", [])
-    parts = ['<h2>🆕 New Keyword Opportunities</h2>']
-    parts.append(f'''<div class="metric-row">
+    parts = ['<h2>\U0001f4a1 New Keyword Opportunities</h2>']
+
+    # === Generate Keywords form ===
+    parts.append('''<div class="status-box" style="margin-bottom:16px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff">
+    <p style="color:#58a6ff;font-weight:600;margin-bottom:8px">\u2728 Generate New Keyword Ideas</p>
+    <form id="kw-gen-form" action="/api/queue-action" method="POST" onsubmit="event.preventDefault();postAction('/api/queue-action',new FormData(this))" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <input type="hidden" name="action_type" value="generate_keywords">
+        <div style="flex:2;min-width:180px">
+            <label style="display:block;color:#888;font-size:11px;margin-bottom:2px">Topic</label>
+            <input type="text" name="action_params" value='{"topic":"giant bubbles","market":"NZ","count":15}' style="width:100%;padding:8px 10px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+        </div>
+        <div style="flex:0 0 100px">
+            <label style="display:block;color:#888;font-size:11px;margin-bottom:2px">Market</label>
+            <select name="market" style="width:100%;padding:8px 10px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+                <option value="NZ">NZ</option>
+                <option value="AU">AU</option>
+                <option value="both">Both</option>
+            </select>
+        </div>
+        <button type="submit" style="padding:8px 16px;background:#58a6ff;color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">\u2699\ufe0f Generate</button>
+    </form>
+    <p style="color:#888;font-size:11px;margin-top:6px">Generated keywords appear within 30 min. Reload the page to see results.</p>
+    </div>''')
+
+    parts.append(f'''<div class="metric-row">\n
 <div class="metric-card"><div class="value">{m["count"]}</div><div class="label">Untracked Keywords</div></div>
 <div class="metric-card"><div class="value">{m.get("avg_opp",0):.1f}</div><div class="label">Avg Opportunity Score</div></div>
 <div class="metric-card ok"><div class="value">{m.get("total_vol",0):,}</div><div class="label">Total Monthly Searches</div></div>
@@ -329,9 +462,9 @@ def render_new_keywords(ctx):
             parts.append(f'<div class="quick-win"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])} &middot; {esc(r["category"])}</div><div class="detail">Score: {r.get("score",0):.0f} | Vol: {r.get("vol",0):,} | Diff: {r.get("diff",0)}</div></div>')
         parts.append('</div>')
 
-    parts.append('<h3>📋 All Untracked Keywords</h3><div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th>Domain</th><th>Keyword</th><th>Category</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th></tr></thead><tbody>')
+    parts.append('<h3>\U0001f4cb All Untracked Keywords</h3><div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Domain</th><th>Keyword</th><th>Category</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th></tr></thead><tbody>')
     for r in rows:
-        parts.append(f'<tr><td>{esc(r["domain"])}</td><td style="font-weight:600">{esc(r["keyword"])}</td><td>{esc(r["category"])}</td><td>{esc(r["intent"])}</td><td>{r.get("vol",0):,}</td><td>{r.get("score",0)}</td><td>{r.get("diff",0)}</td></tr>')
+        parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{r["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete keyword">\u2715</button></td><td>{esc(r["domain"])}</td><td style="font-weight:600">{esc(r["keyword"])}</td><td>{esc(r["category"])}</td><td>{esc(r["intent"])}</td><td>{r.get("vol",0):,}</td><td>{r.get("score",0)}</td><td>{r.get("diff",0)}</td></tr>')
     parts.append('</tbody></table></div>')
 
     return "".join(parts)
@@ -373,9 +506,11 @@ def render_issues(ctx):
     for r in rows:
         sev = r["severity"]
         fixed = r["status"] == "fixed"
+        error_id = str(r['id'])
+        fixed_btn = f' | <button onclick="markFixed(\'/api/mark-fixed/{error_id}\')" style="background:none;border:1px solid #4ecdc4;color:#4ecdc4;border-radius:4px;cursor:pointer;padding:2px 8px;font-size:11px;margin-left:8px" title="Mark as fixed">&#9989; Mark Fixed</button>' if not fixed else ''
         parts.append(f'''<div class="issue-detail {sev}{" fixed" if fixed else ""}">
 <div><span class="sev-badge sev-{sev}">{sev}</span><strong style="margin-left:8px">{esc(r.get("error_type","").replace("_"," ").title())}</strong>
-<span style="float:right;color:#888;font-size:12px">{"&#9989; Fixed" if fixed else "&#128308; Open"}</span></div>
+<span style="float:right;color:#888;font-size:12px">{"&#9989; Fixed" if fixed else "&#128308; Open"}{fixed_btn}</span></div>
 <div class="meta">{esc(r.get("domain",""))} | {esc(r.get("page_url",""))[:80]}</div>
 <div class="desc">{esc(r.get("description",""))}</div>
 <div class="suggestion">&#128161; {esc(r.get("suggestion",""))}</div>
@@ -395,7 +530,22 @@ def render_content(ctx):
     display = ctx.get("ideas_display", [])
     effort_filter = ctx.get("selected_effort", "All")
 
-    parts = ['<h2>📝 Blog Content Ideas</h2>']
+    parts = ['<h2>\U0001f4dd Blog Content Ideas</h2>']
+
+    # === Generate Content Ideas form ===
+    parts.append('''<div class="status-box" style="margin-bottom:16px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff">
+    <p style="color:#58a6ff;font-weight:600;margin-bottom:8px">\u2728 Generate New Content Ideas</p>
+    <form id="idea-gen-form" action="/api/queue-action" method="POST" onsubmit="event.preventDefault();postAction('/api/queue-action',new FormData(this))" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <input type="hidden" name="action_type" value="generate_ideas">
+        <div style="flex:2;min-width:180px">
+            <label style="display:block;color:#888;font-size:11px;margin-bottom:2px">Topic / Keywords</label>
+            <input type="text" name="action_params" value='{"topic":"giant bubbles for kids parties, outdoor bubble activities, bubble entertainer hire","count":10}' style="width:100%;padding:8px 10px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+        </div>
+        <button type="submit" style="padding:8px 16px;background:#58a6ff;color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">\u2699\ufe0f Generate</button>
+    </form>
+    <p style="color:#888;font-size:11px;margin-top:6px">Content ideas appear within 30 min. Reload to see new ideas.</p>
+    </div>''')
+
     parts.append(f'''<div class="metric-row">
 <div class="metric-card"><div class="value">{m["count"]}</div><div class="label">Ideas</div></div>
 <div class="metric-card"><div class="value">{m.get("avg_score",0):.1f}</div><div class="label">Avg Opportunity Score</div></div>
@@ -424,9 +574,16 @@ def render_content(ctx):
         parts.append('</div>')
 
     if display:
-        parts.append('<h3>📋 All Content Ideas</h3><div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th>Title</th><th>Target Keyword</th><th>Category</th><th>Searches</th><th>Score</th><th>Effort</th><th>Type</th></tr></thead><tbody>')
+        parts.append('<h3>\U0001f4cb All Content Ideas</h3><div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:80px">Actions</th><th>Title</th><th>Target Keyword</th><th>Category</th><th>Searches</th><th>Score</th><th>Effort</th><th>Type</th></tr></thead><tbody>')
         for r in display:
-            parts.append(f'<tr><td style="font-weight:600">{esc(r["Title"])}</td><td>{esc(r.get("Keyword",""))}</td><td>{esc(r.get("Category",""))}</td><td>{r.get("Searches",0):,}</td><td>{r.get("Score","")}</td><td>{esc(r.get("Effort",""))}</td><td>{esc(r.get("Type",""))}</td></tr>')
+            idea_id = r.get("Id", "")
+            parts.append(f'''<tr>
+<td style="white-space:nowrap">
+<button onclick="deleteItem('/api/delete/idea/{idea_id}')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button>
+<button onclick="postAction('/api/queue-action',new FormData(document.getElementById('wa-{idea_id}')))" style="background:none;border:1px solid #58a6ff;color:#58a6ff;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;margin-left:4px" title="Write Article">\u270d\ufe0f</button>
+<form id="wa-{idea_id}" style="display:none"><input type="hidden" name="action_type" value="write_article"><input type="hidden" name="action_params" value='{{"idea_id":{idea_id}}}'></form>
+</td>
+<td style="font-weight:600">{esc(r["Title"])}</td><td>{esc(r.get("Keyword",""))}</td><td>{esc(r.get("Category",""))}</td><td>{r.get("Searches",0):,}</td><td>{r.get("Score","")}</td><td>{esc(r.get("Effort",""))}</td><td>{esc(r.get("Type",""))}</td></tr>''')
         parts.append('</tbody></table></div>')
 
     return "".join(parts)
@@ -484,17 +641,17 @@ def render_content_studio(ctx):
 <div class="metric-card warn"><div class="value">{sum(1 for a in articles if a.get("status")=="draft")}</div><div class="label">Drafts</div></div>
 </div>''')
 
-        parts.append('<h3>📄 Published Articles</h3>')
-        parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Title</th><th>Domain</th><th>Status</th><th>Words</th><th>SEO Score</th><th>Created</th></tr></thead><tbody>')
+        parts.append('<h3>\U0001f4c4 Published Articles</h3>')
+        parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Title</th><th>Domain</th><th>Status</th><th>Words</th><th>SEO Score</th><th>Created</th></tr></thead><tbody>')
         for a in articles:
             link = esc(a.get("shopify_url","") or a.get("article_url",""))
             title = esc(a.get("title",""))
-            status_icon = "✅" if a.get("status")=="published" else "📝"
+            status_icon = "\u2705" if a.get("status")=="published" else "\U0001f4dd"
             domain = esc(a.get("target_domain",""))
             words = a.get("word_count",0) or 0
             seo = a.get("seo_score","") or "-"
             created = esc(a.get("created_at","") or "")
-            parts.append(f'<tr><td style="font-weight:600">{title}</td><td>{domain}</td><td>{status_icon} {esc(a.get("status",""))}</td><td>{words:,}</td><td>{seo}</td><td>{created[:10] if created else ""}</td></tr>')
+            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/article/{a["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button></td><td style="font-weight:600">{title}</td><td>{domain}</td><td>{status_icon} {esc(a.get("status",""))}</td><td>{words:,}</td><td>{seo}</td><td>{created[:10] if created else ""}</td></tr>')
         parts.append('</tbody></table></div>')
 
         if any(a.get("target_keywords") for a in articles):
@@ -507,7 +664,7 @@ def render_content_studio(ctx):
                     parts.append(f'<div class="status-box"><div style="font-weight:600;margin-bottom:6px">{esc(a["title"])}</div>{kw_tags}</div>')
             parts.append('</div>')
     else:
-        parts.append('<p style="color:#888">No articles published yet. Use the Content Studio in the Streamlit dashboard (local) to write and publish articles from keyword ideas.</p>')
+        parts.append('<p style="color:#888">No articles published yet. Use the "Write Article" button in the Content tab to queue an article for AI generation.</p>')
 
     return "".join(parts)
 
@@ -534,11 +691,13 @@ def render_deep_audit(ctx):
             if sev_items:
                 parts.append(f'<h3 style="color:{sev_color};margin-top:16px;margin-bottom:8px">🔴 {sev_name.title()} ({len(sev_items)})</h3>')
                 for f in sev_items:
+                    fid = str(f['id'])
                     parts.append(f'''<div class="issue-detail {sev_name}">
-<div><span class="sev-badge sev-{sev_name}">{sev_name}</span><strong style="margin-left:8px">{esc(f.get("error_type","").replace("_"," ").title())}</strong></div>
+<div><span class="sev-badge sev-{sev_name}">{sev_name}</span><strong style="margin-left:8px">{esc(f.get("error_type","").replace("_"," ").title())}</strong>
+<span style="float:right"><button onclick="markFixed('/api/mark-fixed/{fid}')" style="background:none;border:1px solid #4ecdc4;color:#4ecdc4;border-radius:4px;cursor:pointer;padding:2px 8px;font-size:11px" title="Mark as fixed">&#9989; Mark Fixed</button></span></div>
 <div class="meta">{esc(f.get("domain",""))} | {esc(f.get("page_url",""))[:80]}</div>
 <div class="desc">{esc(f.get("description",""))}</div>
-<div class="suggestion">💡 {esc(f.get("suggestion",""))}</div>
+<div class="suggestion">&#128161; {esc(f.get("suggestion",""))}</div>
 </div>''')
     else:
         parts.append('<p style="color:#888">No audit findings available. Run a site crawl to generate findings.</p>')
@@ -602,8 +761,29 @@ def render_settings(ctx):
     parts.append('</div><h3>📁 Dashboard Info</h3><div class="status-box">')
     parts.append('<p>📍 <strong>App:</strong> tinka-seo-dashboard.vercel.app</p>')
     parts.append('<p>🗄️ <strong>Data:</strong> SQLite, auto-refreshes every 60s</p>')
-    parts.append(f'<p>🏷️ <strong>Version:</strong> v0.8 - Live Data with Recommendations</p>')
+    parts.append(f'<p>\U0001f3f7\ufe0f <strong>Version:</strong> v0.9 - Interactive Actions with Live Queue</p>')
     parts.append('</div></div></div>')
+
+    # === Pending Actions section ===
+    pending_actions = ctx.get("pending_actions", [])
+    pending_count = ctx.get("pending_count", 0)
+    parts.append(f'''<h3 style="margin-top:20px">\u2699\ufe0f Pending Actions</h3>
+<div class="status-box" style="margin-bottom:16px">
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+<div class="metric-card" style="flex:1;min-width:100px"><div class="value" style="font-size:18px">{len(pending_actions)}</div><div class="label">Recent Actions</div></div>
+<div class="metric-card" style="flex:1;min-width:100px"><div class="value" style="font-size:18px;color:{"#ff8800" if pending_count > 0 else "#00d4aa"}">{pending_count}</div><div class="label">Pending</div></div>
+</div>
+<p style="color:#888;font-size:12px">Actions queued from the dashboard are processed by a local agent within 30 minutes.</p>
+''')
+    if pending_actions:
+        parts.append('<div style="max-height:300px;overflow-y:auto"><table class="data-table"><thead><tr><th>ID</th><th>Action</th><th>Status</th><th>Created</th><th>Result</th></tr></thead><tbody>')
+        for a in pending_actions:
+            status_icon = "\u23f3" if a["status"] == "pending" else "\u2705" if a["status"] == "completed" else "\u274c"
+            parts.append(f'<tr><td>{a["id"]}</td><td>{esc(a.get("action_type",""))}</td><td>{status_icon} {esc(a["status"])}</td><td>{esc(a.get("created_at",""))}</td><td>{esc(str(a.get("result","") or a.get("error","") or ""))[:40]}</td></tr>')
+        parts.append('</tbody></table></div>')
+    else:
+        parts.append('<p style="color:#666;font-size:13px;margin-top:8px">No actions queued yet. Use the Generate/Delete buttons on other tabs to create actions.</p>')
+    parts.append('</div>')
 
     if sync_hist:
         parts.append('<h3>Sync History</h3><table class="data-table"><thead><tr><th>Source</th><th>Status</th><th>Rows</th><th>Started</th><th>Completed</th></tr></thead><tbody>')
@@ -788,7 +968,7 @@ async def dashboard(
                                    font_color="#ccc", legend=dict(orientation="h", y=1.12))
                 trend_chart = f'<div class="grid-2"><div>{p1}</div><div>{fig_to_html(fig2)}</div></div>'
 
-        kw_display = [{"Domain": r["domain"], "Keyword": r["keyword"],
+        kw_display = [{"Id": r["id"], "Domain": r["domain"], "Keyword": r["keyword"],
                        "Category": r["category"], "Intent": r["intent"],
                        "Vol": si(r["volume"]), "Score": round(sf(r["opportunity_score"]), 1),
                        "Diff": si(r["difficulty"]), "Pos": round(sf(r.get("current_position", 0)), 1),
@@ -859,10 +1039,11 @@ async def dashboard(
         for r in open_: dc[r["domain"]] += 1
         if dc:
             di = sorted(dc.items(), key=lambda x: x[1], reverse=True)
-            fig = px.bar(x=[d for d,_ in di], y=[c for _,c in di],
-                         title="Open Issues by Domain", color_discrete_sequence=["#4ecdc4"],
-                         labels={"x": "Domain", "y": "Count"})
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#ccc")
+            fig = go.Figure(data=[go.Bar(x=[d for d,_ in di], y=[c for _,c in di],
+                                         marker_color="#4ecdc4")])
+            fig.update_layout(title="Open Issues by Domain",
+                              xaxis_title="Domain", yaxis_title="Count",
+                              paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#ccc")
             issues_charts["dom_bar"] = fig_to_html(fig, 300)
 
     # ═══ CONTENT ═════════════════════════════════════════════════════════
@@ -887,15 +1068,26 @@ async def dashboard(
             "avg_score": round(sum(sc2)/len(sc2), 1) if sc2 else 0,
             "total_searches": sum(si(r["estimated_searches"]) for r in ideas_rows),
         }
-        # Matrix chart
-        fig = px.scatter(x=[sf(r["estimated_searches"]) for r in ideas_rows],
-                         y=[sf(r["opportunity_score"]) for r in ideas_rows],
-                         size=[sf(r["estimated_searches"]) for r in ideas_rows],
-                         color=[r["category"] for r in ideas_rows],
-                         hover_name=[r["title"] for r in ideas_rows],
-                         title="Opp Score vs Search Volume",
-                         labels={"x": "Monthly Searches", "y": "Score"})
-        fig.update_layout(height=400, paper_bgcolor="rgba(0,0,0,0)",
+        # Matrix chart — assign each category a numeric color index
+        _cats = sorted({r["category"] for r in ideas_rows})
+        _cat_colors = {c: i for i, c in enumerate(_cats)}
+        _palette = ["#ff6b6b", "#4ecdc4", "#ffe66d", "#95e1d3", "#f38181",
+                    "#aa96da", "#fcbad3", "#a8d8ea", "#ffffd2", "#ff9a8b"]
+        fig = go.Figure(data=[go.Scatter(
+            x=[sf(r["estimated_searches"]) for r in ideas_rows],
+            y=[sf(r["opportunity_score"]) for r in ideas_rows],
+            mode="markers",
+            marker=dict(size=[max(8, min(40, sf(r["estimated_searches"])/50)) for r in ideas_rows],
+                        color=[_cat_colors[r["category"]] for r in ideas_rows],
+                        colorscale=[[i/(len(_cats)-1) if len(_cats) > 1 else 0, _palette[i % len(_palette)]]
+                                    for i in range(len(_cats))],
+                        showscale=False),
+            text=[f"{r['title']} ({r['category']})" for r in ideas_rows],
+            hovertemplate="<b>%{text}</b><br>Searches: %{x}<br>Score: %{y}<extra></extra>"
+        )])
+        fig.update_layout(title="Opp Score vs Search Volume",
+                          xaxis_title="Monthly Searches", yaxis_title="Score",
+                          height=400, paper_bgcolor="rgba(0,0,0,0)",
                           plot_bgcolor="rgba(0,0,0,0)", font_color="#ccc")
         ideas_charts["matrix"] = fig_to_html(fig, 400)
 
@@ -904,11 +1096,11 @@ async def dashboard(
             vbc2[r["category"]] += sf(r["estimated_searches"])
         if vbc2:
             vi2 = sorted(vbc2.items(), key=lambda x: x[1])
-            fig = px.bar(x=[v for _, v in vi2], y=[c for c, _ in vi2], orientation="h",
-                         title="Search Volume by Category",
-                         color_discrete_sequence=["#ff6b6b"],
-                         labels={"x": "Monthly Searches", "y": ""})
-            fig.update_layout(height=400, paper_bgcolor="rgba(0,0,0,0)",
+            fig = go.Figure(data=[go.Bar(x=[v for _, v in vi2], y=[c for c, _ in vi2],
+                                         orientation="h", marker_color="#ff6b6b")])
+            fig.update_layout(title="Search Volume by Category",
+                              xaxis_title="Monthly Searches", yaxis_title="",
+                              height=400, paper_bgcolor="rgba(0,0,0,0)",
                               plot_bgcolor="rgba(0,0,0,0)", font_color="#ccc",
                               margin=dict(l=0, r=0, t=30, b=0))
             ideas_charts["vol_by_cat"] = fig_to_html(fig, 400)
@@ -920,7 +1112,7 @@ async def dashboard(
                       "target_keyword": r["target_keyword"], "effort": r["effort"],
                       "content_type": r["content_type"]} for r in top]
 
-        ideas_display = [{"Title": r["title"], "Keyword": r["target_keyword"],
+        ideas_display = [{"Id": r["id"], "Title": r["title"], "Keyword": r["target_keyword"],
                           "Category": r["category"], "Searches": si(r["estimated_searches"]),
                           "Score": round(sf(r["opportunity_score"]), 1),
                           "Effort": r["effort"], "Type": r["content_type"]} for r in ideas_rows]
@@ -991,6 +1183,20 @@ async def dashboard(
            FROM sync_log ORDER BY started_at DESC LIMIT 10"""
     )
 
+    # ═══ PENDING ACTIONS ════════════════════════════════════════════════
+    pending_actions = []
+    pending_count = 0
+    try:
+        acts = fetch(
+            """SELECT id, action_type, action_params, status, created_at, processed_at, result, error
+               FROM action_queue ORDER BY id DESC LIMIT 20"""
+        )
+        if acts:
+            pending_actions = acts
+            pending_count = sum(1 for a in acts if a["status"] == "pending")
+    except Exception:
+        pass
+
     # Quick counts for tab badges
     open_issue_count = issues_metrics.get("open", 0)
     idea_count = ideas_metrics.get("count", 0)
@@ -1015,5 +1221,6 @@ async def dashboard(
         audit_findings=audit_findings, audit_metrics=audit_metrics,
         geo_rows=geo_rows, geo_metrics={},
         last_sync=last_sync, sync_hist=sync_hist,
+        pending_actions=pending_actions, pending_count=pending_count,
     )
     return HTMLResponse(html)

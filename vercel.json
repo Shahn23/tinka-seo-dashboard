@@ -4,7 +4,11 @@
             "src": "api/index.py",
             "use": "@vercel/python",
             "config": {
-                "includeFiles": ["api/seo_dashboard.db"]
+                "includeFiles": [
+                    "api/seo_dashboard.db",
+                    "api/actions_routes.py",
+                    "api/templates/**"
+                ]
             }
         }
     ],
