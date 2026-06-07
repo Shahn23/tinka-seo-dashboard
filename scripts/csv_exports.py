@@ -29,14 +29,16 @@ from pathlib import Path
 # ── Paths ─────────────────────────────────────────────────────────────────────
 # Same pattern used by other scripts (alerts.py, weekly_digest.py, etc.)
 BASE = Path(__file__).resolve().parent.parent
-DATA_DB = BASE / "data" / "seo_dashboard.db"
-API_DB = BASE / "api" / "seo_dashboard.db"
+
+# Priority: 1) /tmp/seo_dashboard.db (Vercel runtime copy), 2) api/seo_dashboard.db (bundled), 3) data/seo_dashboard.db (local)
 TMP_DB = Path("/tmp") / "seo_dashboard.db"
+API_DB = BASE / "api" / "seo_dashboard.db"
+DATA_DB = BASE / "data" / "seo_dashboard.db"
 
 
 def get_conn() -> sqlite3.Connection:
-    """Return a connection to the best available DB copy."""
-    candidates = [DATA_DB, API_DB, TMP_DB]
+    """Flexible DB connection: prefers /tmp copy, then api/, then data/."""
+    candidates = [TMP_DB, API_DB, DATA_DB]
     for p in candidates:
         if p.exists():
             conn = sqlite3.connect(str(p))
