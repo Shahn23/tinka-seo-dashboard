@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape as html_escape
 
 import plotly.graph_objects as go
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 # Import interactive action routes (relative import — Vercel bundles api/ as a
 # package because __init__.py is present, so the sibling module is .actions_routes)
@@ -19,6 +19,12 @@ try:
 except (ImportError, ValueError):
     # Fallback for local dev / non-package contexts
     from actions_routes import router as actions_router
+
+# Import CSV export routes
+try:
+    from .csv_exports import csv_router
+except (ImportError, ValueError):
+    from csv_exports import csv_router
 
 _THIS_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = _THIS_DIR.parent
@@ -57,6 +63,7 @@ except Exception as _e:
 
 app = FastAPI(title="Tinka SEO Dashboard v0.9 - Interactive Actions with Live Queue")
 app.include_router(actions_router)
+app.include_router(csv_router)
 
 # Surface init failures as a 503 (instead of crashing the whole request with 500).
 # First-request cold starts hit this if /tmp was wiped or the bundled DB is bad.
@@ -111,6 +118,20 @@ def si(v, default=0):
 
 def esc(s):
     return html_escape(str(s)) if s is not None else ""
+
+# ── Helper: difficulty badge ──────────────────────────────────────────────────
+def diff_badge(v):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return '<span class="badge-diff badge-diff-easy">N/A</span>'
+    if v < 30:
+        cls = "badge-diff-easy"; lbl = "Easy"
+    elif v <= 60:
+        cls = "badge-diff-medium"; lbl = "Medium"
+    else:
+        cls = "badge-diff-hard"; lbl = "Hard"
+    return f'<span class="badge-diff {cls}">{lbl} ({int(v)})</span>'
 
 # ── Page builder ──────────────────────────────────────────────────────────────
 def render_page(**ctx):
@@ -220,6 +241,29 @@ h3{{font-size:15px;margin-bottom:12px;color:#ddd}}
 .loss-card .meta{{color:#aaa;font-size:12px}}
 .wl-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}}
 .keyword-tag{{display:inline-block;background:#1e2036;border:1px solid #2a2d4a;border-radius:12px;padding:2px 10px;font-size:11px;color:#ccc;margin:2px}}
+.badge-diff{{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}}
+.badge-diff-easy{{background:#1a4a2e;color:#4ecdc4;border:1px solid #4ecdc4}}
+.badge-diff-medium{{background:#4a3a1a;color:#ffcc00;border:1px solid #ffcc00}}
+.badge-diff-hard{{background:#4a1a1a;color:#ff6b6b;border:1px solid #ff6b6b}}
+.rank-arrow{{font-size:14px;margin-right:2px}}
+.rank-arrow-up{{color:#4ecdc4}}
+.rank-arrow-down{{color:#ff6b6b}}
+.rank-arrow-still{{color:#666}}
+.rank-arrow-new{{color:#58a6ff}}
+.diff-legend{{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}}
+.diff-legend span{{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#aaa}}
+.collapsible-header{{background:#1a1c2e;border:1px solid #2a2d4a;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:#ddd;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;user-select:none}}
+.collapsible-header:hover{{background:#1e2036;border-color:#3a3d5a}}
+.collapsible-header .arrow{{transition:transform .2s;font-size:12px}}
+.collapsible-header.active .arrow{{transform:rotate(90deg)}}
+.collapsible-body{{display:none;margin-bottom:16px}}
+.collapsible-body.active{{display:block}}
+.download-csv-btn{{display:inline-block;padding:8px 16px;background:#1e2036;border:1px solid #58a6ff;color:#58a6ff;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;margin-top:8px}}
+.download-csv-btn:hover{{background:#58a6ff;color:#000}}
+.ai-brief-box{{background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff;border-radius:10px;padding:16px;margin-bottom:16px}}
+.ai-brief-box .brief-content{{background:#0f1117;border:1px solid #2a2d4a;border-radius:8px;padding:12px;margin-top:8px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#ccc;max-height:400px;overflow-y:auto}}
+@keyframes spin{{0%{{transform:rotate(0deg)}}100%{{transform:rotate(360deg)}}}}
+.loading-spinner{{display:inline-block;width:14px;height:14px;border:2px solid #58a6ff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}}
 @media(max-width:768px){{.app-layout{{flex-direction:column}}.sidebar{{width:100%;border-right:none;border-bottom:1px solid #2a2d4a}}.grid-2,.wl-grid{{grid-template-columns:1fr}}}}
 </style>
 </head>
@@ -313,6 +357,46 @@ async function markFixed(url) {{
 function generateKeywords() {{ document.getElementById('kw-gen-form').submit(); }}
 function generateIdeas() {{ document.getElementById('idea-gen-form').submit(); }}
 
+// ── Collapsible Sections ──────────────────────────────────────────────────
+function toggleCollapsible(id) {{
+    const h = document.getElementById(id + '-header');
+    const b = document.getElementById(id + '-body');
+    if (h && b) {{
+        h.classList.toggle('active');
+        b.classList.toggle('active');
+        setTimeout(() => {{
+            b.querySelectorAll('.js-plotly-plot').forEach(p => Plotly.Plots.resize(p));
+        }}, 200);
+    }}
+}}
+
+// ── AI Brief Form ────────────────────────────────────────────────────────
+function generateAIBrief() {{
+    const kw = document.getElementById('ai-brief-keyword').value.trim();
+    if (!kw) return;
+    const btn = document.getElementById('ai-brief-btn');
+    const out = document.getElementById('ai-brief-output');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+    out.innerHTML = '';
+    fetch('/api/generate-brief?keyword=' + encodeURIComponent(kw))
+        .then(r => r.json())
+        .then(data => {{
+            if (data.error) {{
+                out.innerHTML = '<div style="color:#ff6b6b">Error: ' + data.error + '</div>';
+            }} else {{
+                out.innerHTML = '<div class="brief-content">' + (data.brief || data.text || 'No output generated.') + '</div>';
+            }}
+        }})
+        .catch(e => {{
+            out.innerHTML = '<div style="color:#ff6b6b">Network error: ' + e.message + '</div>';
+        }})
+        .finally(() => {{
+            btn.disabled = false;
+            btn.textContent = '⚡ Generate';
+        }});
+}}
+
 // ── Toast Notification ──────────────────────────────────────────────────
 function showToast(msg, type) {{
     const t = document.getElementById('toast') || (() => {{
@@ -344,8 +428,19 @@ def render_keywords(ctx):
     kws = ctx["keyword_list"]
     sel_kw = ctx.get("selected_keyword", "")
     trend = ctx.get("trend_chart", "")
+    rank_changes = ctx.get("kw_rank_changes", {})
+    heatmap_html = ctx.get("heatmap_html", "")
+    topical_html = ctx.get("topical_html", "")
 
-    parts = ['<h2>🔑 Keyword Rankings & Position Tracking</h2>']
+    parts = ['<h2>\U0001f511 Keyword Rankings & Position Tracking</h2>']
+
+    # Difficulty color legend
+    parts.append('<div class="diff-legend">'
+        '<span><span class="badge-diff badge-diff-easy">\u25cf</span> Difficulty &lt; 30 (Easy)</span>'
+        '<span><span class="badge-diff badge-diff-medium">\u25cf</span> Difficulty 30\u201360 (Medium)</span>'
+        '<span><span class="badge-diff badge-diff-hard">\u25cf</span> Difficulty &gt; 60 (Hard)</span>'
+        '</div>')
+
     dist = metrics.get("distribution", {})
     parts.append(f'''<div class="metric-row">
 <div class="metric-card"><div class="value">{metrics["count"]}</div><div class="label">Keywords Tracked</div></div>
@@ -363,21 +458,40 @@ def render_keywords(ctx):
     if charts:
         parts.append(f'<div class="grid-2"><div class="chart-box">{charts.get("vol_by_cat","")}</div><div class="chart-box">{charts.get("opp_dist","")}</div></div>')
 
+    # Daily Winners & Losers (top 5 risers and top 5 fallers)
+    wl_risers = ctx.get("wl_risers", [])
+    wl_fallers = ctx.get("wl_fallers", [])
+    if wl_risers or wl_fallers:
+        parts.append('<h3>\U0001f3c6 Daily Winners & Losers</h3><div class="wl-grid">')
+        parts.append('<div><h4 style="color:#00d4aa;margin-bottom:8px">\U0001f4c8 Top 5 Risers</h4>')
+        if wl_risers:
+            for r in wl_risers:
+                parts.append(f'<div class="win-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r.get("domain",""))}</div><div class="detail"><span class="rank-arrow rank-arrow-up">\u25b2</span> +{r.get("change",0)} spots &mdash; #{r.get("current_pos",0):.0f}</div></div>')
+        else:
+            parts.append('<p style="color:#666;font-size:13px">No risers in this period.</p>')
+        parts.append('</div>')
+        parts.append('<div><h4 style="color:#ff6b6b;margin-bottom:8px">\U0001f4c9 Top 5 Fallers</h4>')
+        if wl_fallers:
+            for r in wl_fallers:
+                parts.append(f'<div class="loss-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r.get("domain",""))}</div><div class="detail"><span class="rank-arrow rank-arrow-down">\u25bc</span> {abs(r.get("change",0))} spots &mdash; #{r.get("current_pos",0):.0f}</div></div>')
+        else:
+            parts.append('<p style="color:#666;font-size:13px">No fallers in this period.</p>')
+        parts.append('</div></div>')
+
+    # 30-day Winners & Losers
     if wins or losses:
-        parts.append(f'<h3>🏆 Winners & Losers</h3><div class="wl-grid">')
-        # Winners
-        parts.append('<div><h4 style="color:#00d4aa;margin-bottom:8px">📈 Biggest Improvements</h4>')
+        parts.append(f'<h3>\U0001f3c6 30-Day Winners & Losers</h3><div class="wl-grid">')
+        parts.append('<div><h4 style="color:#00d4aa;margin-bottom:8px">\U0001f4c8 Biggest Improvements</h4>')
         if wins:
             for r in wins[:6]:
-                parts.append(f'<div class="win-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])}</div><div class="detail">&#8593; {int(r.get("change",1))} spots &mdash; #{r.get("current_pos",0):.0f} from #{r.get("past_pos",0):.0f}</div></div>')
+                parts.append(f'<div class="win-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])}</div><div class="detail">\u2191 {int(r.get("change",1))} spots &mdash; #{r.get("current_pos",0):.0f} from #{r.get("past_pos",0):.0f}</div></div>')
         else:
             parts.append('<p style="color:#666;font-size:13px">No improvements in this period.</p>')
         parts.append('</div>')
-        # Losers
-        parts.append('<div><h4 style="color:#ff6b6b;margin-bottom:8px">📉 Biggest Drops</h4>')
+        parts.append('<div><h4 style="color:#ff6b6b;margin-bottom:8px">\U0001f4c9 Biggest Drops</h4>')
         if losses:
             for r in losses[:6]:
-                parts.append(f'<div class="loss-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])}</div><div class="detail">&#8595; {abs(int(r.get("change",1)))} spots &mdash; #{r.get("current_pos",0):.0f} from #{r.get("past_pos",0):.0f}</div></div>')
+                parts.append(f'<div class="loss-card" style="margin-bottom:6px"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])}</div><div class="detail">\u2193 {abs(int(r.get("change",1)))} spots &mdash; #{r.get("current_pos",0):.0f} from #{r.get("past_pos",0):.0f}</div></div>')
         else:
             parts.append('<p style="color:#666;font-size:13px">No drops in this period.</p>')
         parts.append('</div></div>')
@@ -385,13 +499,13 @@ def render_keywords(ctx):
     # Quick wins
     qw = ctx.get("quick_wins_all", [])
     if qw:
-        parts.append('<h3>⚡ Quick Wins (High Opp, Low Diff)</h3><div class="quick-wins-row">')
+        parts.append('<h3>\u26a1 Quick Wins (High Opp, Low Diff)</h3><div class="quick-wins-row">')
         for r in qw[:6]:
             parts.append(f'<div class="quick-win"><div class="kw">{esc(r["keyword"])}</div><div class="meta">{esc(r["domain"])}</div><div class="detail">Score: {r.get("score",0):.0f} | Vol: {r.get("vol",0):,} | Pos: {r.get("pos",0):.0f}</div></div>')
         parts.append('</div>')
 
     # Trend chart
-    parts.append('<h3>📈 Position Trend</h3><div class="trend-select"><form method="GET" action="/">')
+    parts.append('<h3>\U0001f4c8 Position Trend</h3><div class="trend-select"><form method="GET" action="/">')
     for k in ctx.get("qp_keep", []):
         parts.append(f'<input type="hidden" name="{esc(k)}" value="{esc(ctx["qp_vals"][k])}">')
     parts.append(f'<select name="keyword" onchange="this.form.submit()"><option value="">Select a keyword...</option>')
@@ -402,17 +516,62 @@ def render_keywords(ctx):
     if trend:
         parts.append(trend)
 
-    # Full table
-    parts.append('<h3>📋 All Keywords</h3>')
+    # Full table with difficulty badges and rank change indicators
+    parts.append('<h3>\U0001f4cb All Keywords</h3>')
     kw_display = ctx.get("kw_display", [])
     if kw_display:
-        parts.append('<div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Domain</th><th>Keyword</th><th>Cat</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th><th>Pos</th><th>Clicks</th><th>Imp</th></tr></thead><tbody>')
+        parts.append('<div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Domain</th><th>Keyword</th><th>Cat</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th><th>Pos</th><th>Chg</th><th>Clicks</th><th>Imp</th></tr></thead><tbody>')
         for r in kw_display:
             kw_id = r.get("Id", "")
-            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{kw_id}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button></td><td>{esc(r["Domain"])}</td><td style="font-weight:600">{esc(r["Keyword"])}</td><td>{esc(r["Category"])}</td><td>{esc(r.get("Intent",""))}</td><td>{r.get("Vol",0):,}</td><td>{r.get("Score","")}</td><td>{r.get("Diff","")}</td><td>{r.get("Pos","")}</td><td>{r.get("Clicks",0)}</td><td>{r.get("Imp",0):,}</td></tr>')
+            kw_key = str(kw_id)
+            rc = rank_changes.get(kw_key, {})
+            chg_val = rc.get("change")
+            if chg_val is not None:
+                if chg_val > 0:
+                    arrow = '<span class="rank-arrow rank-arrow-up">\u25b2</span>'
+                    chg_str = f'+{int(chg_val)}'
+                elif chg_val < 0:
+                    arrow = '<span class="rank-arrow rank-arrow-down">\u25bc</span>'
+                    chg_str = f'{int(chg_val)}'
+                else:
+                    arrow = '<span class="rank-arrow rank-arrow-still">\u2014</span>'
+                    chg_str = '0'
+            elif rc.get("is_new"):
+                arrow = '<span class="rank-arrow rank-arrow-new">\u2726</span>'
+                chg_str = 'New'
+            else:
+                arrow = '<span class="rank-arrow rank-arrow-still">\u2014</span>'
+                chg_str = '-'
+            diff_html = diff_badge(r.get("Diff", ""))
+            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{kw_id}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">&#10005;</button></td><td>{esc(r["Domain"])}</td><td style="font-weight:600">{esc(r["Keyword"])}</td><td>{esc(r["Category"])}</td><td>{esc(r.get("Intent",""))}</td><td>{r.get("Vol",0):,}</td><td>{r.get("Score","")}</td><td>{diff_html}</td><td>{r.get("Pos","")}</td><td>{arrow} {chg_str}</td><td>{r.get("Clicks",0)}</td><td>{r.get("Imp",0):,}</td></tr>')
         parts.append('</tbody></table></div>')
     else:
         parts.append('<p style="color:#888">No keywords match filters.</p>')
+
+    # CSV download button for Keywords
+    parts.append('<div><a href="/api/export/keywords.csv" class="download-csv-btn">&#128229; Download CSV</a></div>')
+
+    # Rank Position Heatmap (collapsible)
+    if heatmap_html:
+        parts.append(f'''<div style="margin-top:20px">
+<div id="heatmap-header" class="collapsible-header" onclick="toggleCollapsible('heatmap')">
+<span>&#128202; Rank Position Heatmap</span><span class="arrow">&#9654;</span>
+</div>
+<div id="heatmap-body" class="collapsible-body">
+<div class="chart-box">{heatmap_html}</div>
+</div>
+</div>''')
+
+    # Topical Authority bar chart (collapsible)
+    if topical_html:
+        parts.append(f'''<div style="margin-top:12px">
+<div id="topical-header" class="collapsible-header" onclick="toggleCollapsible('topical')">
+<span>&#128200; Topical Authority</span><span class="arrow">&#9654;</span>
+</div>
+<div id="topical-body" class="collapsible-body">
+<div class="chart-box">{topical_html}</div>
+</div>
+</div>''')
 
     return "".join(parts)
 
@@ -448,7 +607,7 @@ def render_new_keywords(ctx):
     <p style="color:#888;font-size:11px;margin-top:6px">Generated keywords appear within 30 min. Reload the page to see results.</p>
     </div>''')
 
-    parts.append(f'''<div class="metric-row">\n
+    parts.append(f'''<div class="metric-row">
 <div class="metric-card"><div class="value">{m["count"]}</div><div class="label">Untracked Keywords</div></div>
 <div class="metric-card"><div class="value">{m.get("avg_opp",0):.1f}</div><div class="label">Avg Opportunity Score</div></div>
 <div class="metric-card ok"><div class="value">{m.get("total_vol",0):,}</div><div class="label">Total Monthly Searches</div></div>
@@ -464,7 +623,7 @@ def render_new_keywords(ctx):
 
     parts.append('<h3>\U0001f4cb All Untracked Keywords</h3><div style="max-height:500px;overflow-y:auto"><table class="data-table"><thead><tr><th style="width:40px">Del</th><th>Domain</th><th>Keyword</th><th>Category</th><th>Intent</th><th>Vol</th><th>Score</th><th>Diff</th></tr></thead><tbody>')
     for r in rows:
-        parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{r["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete keyword">\u2715</button></td><td>{esc(r["domain"])}</td><td style="font-weight:600">{esc(r["keyword"])}</td><td>{esc(r["category"])}</td><td>{esc(r["intent"])}</td><td>{r.get("vol",0):,}</td><td>{r.get("score",0)}</td><td>{r.get("diff",0)}</td></tr>')
+        parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/keyword/{r["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete keyword">&#10005;</button></td><td>{esc(r["domain"])}</td><td style="font-weight:600">{esc(r["keyword"])}</td><td>{esc(r["category"])}</td><td>{esc(r["intent"])}</td><td>{r.get("vol",0):,}</td><td>{r.get("score",0)}</td><td>{r.get("diff",0)}</td></tr>')
     parts.append('</tbody></table></div>')
 
     return "".join(parts)
@@ -472,14 +631,40 @@ def render_new_keywords(ctx):
 # ── TAB 3: SEO Issues ────────────────────────────────────────────────────────
 def render_issues(ctx):
     rows = ctx.get("issue_rows", [])
-    if not rows:
-        return "<h2>Technical SEO Issues</h2><p style='color:#888'>No SEO issues found. Great work!</p>"
-
     m = ctx["issues_metrics"]
     charts = ctx.get("issues_charts", {})
     sev_filter = ctx.get("selected_sev", "All")
+    health_gauge = ctx.get("health_gauge_html", "")
+    health_metrics = ctx.get("health_metrics", {})
 
-    parts = ['<h2>🛠️ Technical SEO Issues</h2>']
+    parts = ['<h2>\U0001f6e0\ufe0f Technical SEO Issues</h2>']
+
+    # Site Health Gauge (Phase 5.2)
+    if health_gauge:
+        grade = health_metrics.get("grade", "N/A")
+        score = health_metrics.get("score", 0)
+        open_counts = health_metrics.get("open_counts", {})
+        fixed_counts = health_metrics.get("fixed_counts", {})
+
+        parts.append(f'''<div class="status-box" style="margin-bottom:16px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff">
+<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+<div style="flex:1;min-width:200px">{health_gauge}</div>
+<div style="flex:1;min-width:180px">
+<div style="font-size:14px;color:#58a6ff;font-weight:600;margin-bottom:8px">Site Health Grade: <span style="font-size:28px">{grade}</span> ({score:.0f}/100)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+<div><span style="color:#ff4444">\u25cf</span> Critical: <strong>{open_counts.get("critical",0)}</strong> open / {fixed_counts.get("critical",0)} fixed</div>
+<div><span style="color:#ff8800">\u25cf</span> High: <strong>{open_counts.get("high",0)}</strong> open / {fixed_counts.get("high",0)} fixed</div>
+<div><span style="color:#ffcc00">\u25cf</span> Moderate: <strong>{open_counts.get("moderate",0)}</strong> open / {fixed_counts.get("moderate",0)} fixed</div>
+<div><span style="color:#888">\u25cf</span> Low: <strong>{open_counts.get("low",0)}</strong> open / {fixed_counts.get("low",0)} fixed</div>
+</div>
+</div>
+</div>
+</div>''')
+
+    if not rows:
+        parts.append("<p style='color:#888'>No SEO issues found. Great work!</p>")
+        return "".join(parts)
+
     parts.append(f'''<div class="metric-row">
 <div class="metric-card danger"><div class="value">{m["open"]}</div><div class="label">Open Issues</div></div>
 <div class="metric-card danger"><div class="value">{m["critical"]}</div><div class="label">Critical</div></div>
@@ -521,16 +706,28 @@ def render_issues(ctx):
 # ── TAB 4: Content Backlog ──────────────────────────────────────────────────
 def render_content(ctx):
     rows = ctx.get("ideas_rows", [])
-    if not rows:
-        return "<h2>Content Idea Backlog</h2><p style='color:#888'>No content ideas found.</p>"
-
     m = ctx["ideas_metrics"]
     charts = ctx.get("ideas_charts", {})
     picks = ctx.get("top_picks", [])
     display = ctx.get("ideas_display", [])
     effort_filter = ctx.get("selected_effort", "All")
+    funnel_html = ctx.get("funnel_html", "")
+    ai_brief_text = ctx.get("ai_brief_text", "")
+    ai_brief_kw = ctx.get("ai_brief_keyword", "")
 
     parts = ['<h2>\U0001f4dd Blog Content Ideas</h2>']
+
+    # AI Content Suggestions form (Phase 7.1)
+    parts.append(f'''<div class="ai-brief-box">
+<p style="color:#58a6ff;font-weight:600;margin-bottom:8px">\u2728 AI Content Brief Generator</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<input id="ai-brief-keyword" type="text" placeholder="Enter a keyword for AI brief..." value="{esc(ai_brief_kw)}" style="flex:2;min-width:200px;padding:8px 12px;background:#1e2036;border:1px solid #2a2d4a;border-radius:6px;color:#ccc;font-size:13px">
+<button id="ai-brief-btn" onclick="generateAIBrief()" style="padding:8px 20px;background:#58a6ff;color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">\u26a1 Generate</button>
+</div>
+<div id="ai-brief-output">''')
+    if ai_brief_text:
+        parts.append(f'<div class="brief-content">{esc(ai_brief_text)}</div>')
+    parts.append('</div></div>')
 
     # === Generate Content Ideas form ===
     parts.append('''<div class="status-box" style="margin-bottom:16px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff">
@@ -551,6 +748,10 @@ def render_content(ctx):
 <div class="metric-card"><div class="value">{m.get("avg_score",0):.1f}</div><div class="label">Avg Opportunity Score</div></div>
 <div class="metric-card ok"><div class="value">{m.get("total_searches",0):,}</div><div class="label">Total Monthly Searches</div></div>
 </div>''')
+
+    # Pipeline Funnel Chart (Phase 4.3)
+    if funnel_html:
+        parts.append(f'<h3>\U0001f4c9 Content Pipeline Funnel</h3><div class="chart-box" style="margin-bottom:16px">{funnel_html}</div>')
 
     if charts:
         parts.append(f'<div class="grid-2"><div class="chart-box">{charts.get("matrix","")}</div><div class="chart-box">{charts.get("vol_by_cat","")}</div></div>')
@@ -579,12 +780,15 @@ def render_content(ctx):
             idea_id = r.get("Id", "")
             parts.append(f'''<tr>
 <td style="white-space:nowrap">
-<button onclick="deleteItem('/api/delete/idea/{idea_id}')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button>
-<button onclick="postAction('/api/queue-action',new FormData(document.getElementById('wa-{idea_id}')))" style="background:none;border:1px solid #58a6ff;color:#58a6ff;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;margin-left:4px" title="Write Article">\u270d\ufe0f</button>
+<button onclick="deleteItem('/api/delete/idea/{idea_id}')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">&#10005;</button>
+<button onclick="postAction('/api/queue-action',new FormData(document.getElementById('wa-{idea_id}')))" style="background:none;border:1px solid #58a6ff;color:#58a6ff;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;margin-left:4px" title="Write Article">&#9997\ufe0f</button>
 <form id="wa-{idea_id}" style="display:none"><input type="hidden" name="action_type" value="write_article"><input type="hidden" name="action_params" value='{{"idea_id":{idea_id}}}'></form>
 </td>
 <td style="font-weight:600">{esc(r["Title"])}</td><td>{esc(r.get("Keyword",""))}</td><td>{esc(r.get("Category",""))}</td><td>{r.get("Searches",0):,}</td><td>{r.get("Score","")}</td><td>{esc(r.get("Effort",""))}</td><td>{esc(r.get("Type",""))}</td></tr>''')
         parts.append('</tbody></table></div>')
+
+        # CSV download button for Content
+        parts.append('<div><a href="/api/export/content-ideas.csv" class="download-csv-btn">&#128229; Download CSV</a></div>')
 
     return "".join(parts)
 
@@ -592,16 +796,16 @@ def render_content(ctx):
 def render_competitive(ctx):
     rows = ctx.get("comp_rows", [])
     gap_rows = ctx.get("gap_rows", [])
-    parts = ['<h2>📊 Competitive Keyword Analysis</h2>']
+    parts = ['<h2>\U0001f4ca Competitive Keyword Analysis</h2>']
 
     # Cross-site keyword overlap
     if rows:
-        parts.append('''<h3>🌐 Keyword Coverage by Domain</h3>
+        parts.append('''<h3>\U0001f310 Keyword Coverage by Domain</h3>
 <div style="overflow-x:auto"><table class="data-table">
 <thead><tr><th>Keyword</th><th>giantbubbles.co.nz</th><th>giantbubblesau.com</th><th>Volume</th><th>Category</th></tr></thead><tbody>''')
         for r in rows:
-            nz = "✅" if r["nz_rank"] else ("🟡" if r["nz_kw"] else "❌")
-            au = "✅" if r["au_rank"] else ("🟡" if r["au_kw"] else "❌")
+            nz = "\u2705" if r["nz_rank"] else ("\U0001f7e1" if r["nz_kw"] else "\u274c")
+            au = "\u2705" if r["au_rank"] else ("\U0001f7e1" if r["au_kw"] else "\u274c")
             parts.append(f'<tr><td style="font-weight:600">{esc(r["keyword"])}</td><td>{nz}</td><td>{au}</td><td>{r.get("volume",0):,}</td><td>{esc(r.get("category",""))}</td></tr>')
         parts.append('</tbody></table></div>')
 
@@ -619,7 +823,7 @@ def render_competitive(ctx):
 
     # Keyword gap analysis (keywords tracked in one domain but not the other)
     if gap_rows:
-        parts.append('<h3>🔍 Keyword Gaps</h3><p style="color:#888;font-size:13px;margin-bottom:12px">Keywords where one site has ranking data and the other does not — a content opportunity for the missing domain.</p>')
+        parts.append('<h3>\U0001f50d Keyword Gaps</h3><p style="color:#888;font-size:13px;margin-bottom:12px">Keywords where one site has ranking data and the other does not — a content opportunity for the missing domain.</p>')
         parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Keyword</th><th>Has Data On</th><th>Missing On</th><th>Vol</th><th>NZ Rank</th><th>AU Rank</th></tr></thead><tbody>')
         for r in gap_rows:
             has_domain, miss_domain = ("NZ", "AU") if r.get("nz_pos") else ("AU", "NZ")
@@ -631,7 +835,7 @@ def render_competitive(ctx):
 # ── TAB 6: Content Studio ──────────────────────────────────────────────────
 def render_content_studio(ctx):
     articles = ctx.get("articles", [])
-    parts = ['<h2>✍️ Content Studio</h2>']
+    parts = ['<h2>\u270d\ufe0f Content Studio</h2>']
 
     if articles:
         parts.append(f'''<div class="metric-row">
@@ -651,11 +855,11 @@ def render_content_studio(ctx):
             words = a.get("word_count",0) or 0
             seo = a.get("seo_score","") or "-"
             created = esc(a.get("created_at","") or "")
-            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/article/{a["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">\u2715</button></td><td style="font-weight:600">{title}</td><td>{domain}</td><td>{status_icon} {esc(a.get("status",""))}</td><td>{words:,}</td><td>{seo}</td><td>{created[:10] if created else ""}</td></tr>')
+            parts.append(f'<tr><td><button onclick="deleteItem(\'/api/delete/article/{a["id"]}\')" style="background:none;border:1px solid #ff4444;color:#ff4444;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px" title="Delete">&#10005;</button></td><td style="font-weight:600">{title}</td><td>{domain}</td><td>{status_icon} {esc(a.get("status",""))}</td><td>{words:,}</td><td>{seo}</td><td>{created[:10] if created else ""}</td></tr>')
         parts.append('</tbody></table></div>')
 
         if any(a.get("target_keywords") for a in articles):
-            parts.append('<h3>🎯 Keywords Used in Articles</h3><div class="grid-2">')
+            parts.append('<h3>\U0001f3af Keywords Used in Articles</h3><div class="grid-2">')
             for a in articles:
                 kws = a.get("target_keywords","")
                 if kws:
@@ -672,7 +876,7 @@ def render_content_studio(ctx):
 def render_deep_audit(ctx):
     findings = ctx.get("audit_findings", [])
     audit_metrics = ctx.get("audit_metrics", {})
-    parts = ['<h2>🔍 Deep Site Audit</h2>']
+    parts = ['<h2>\U0001f50d Deep Site Audit</h2>']
 
     if audit_metrics:
         parts.append(f'''<div class="metric-row">
@@ -689,7 +893,7 @@ def render_deep_audit(ctx):
         for sev_name, sev_color in [("critical", "#ff4444"), ("high", "#ff8800"), ("moderate", "#ffcc00"), ("low", "#888")]:
             sev_items = [f for f in findings if f.get("severity") == sev_name and f.get("status") != "fixed"]
             if sev_items:
-                parts.append(f'<h3 style="color:{sev_color};margin-top:16px;margin-bottom:8px">🔴 {sev_name.title()} ({len(sev_items)})</h3>')
+                parts.append(f'<h3 style="color:{sev_color};margin-top:16px;margin-bottom:8px">\U0001f534 {sev_name.title()} ({len(sev_items)})</h3>')
                 for f in sev_items:
                     fid = str(f['id'])
                     parts.append(f'''<div class="issue-detail {sev_name}">
@@ -708,12 +912,12 @@ def render_deep_audit(ctx):
 def render_geo_visibility(ctx):
     geo_rows = ctx.get("geo_rows", [])
     geo_metrics = ctx.get("geo_metrics", {})
-    parts = ['<h2>🌐 AI & GEO Visibility</h2>']
+    parts = ['<h2>\U0001f310 AI & GEO Visibility</h2>']
 
     if geo_rows:
         # Rank trend over time
         dates = sorted(set(r["date"] for r in geo_rows if r.get("date")))
-        parts.append('<h3>📊 GSC Performance Trend</h3>')
+        parts.append('<h3>\U0001f4ca GSC Performance Trend</h3>')
         parts.append('<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Domain</th><th>Avg Position</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead><tbody>')
         for r in sorted(geo_rows, key=lambda x: x.get("date","") or "", reverse=True)[:30]:
             ctr = f'{r.get("ctr",0):.1f}%' if r.get("ctr") else "-"
@@ -723,7 +927,7 @@ def render_geo_visibility(ctx):
         parts.append('<p style="color:#888">No GSC performance trend data available. Data syncs daily at 6 AM.</p>')
 
     # GEO recommendations
-    parts.append('''<h3 style="margin-top:20px">🤖 AI Search Optimization Tips</h3>
+    parts.append('''<h3 style="margin-top:20px">\U0001f916 AI Search Optimization Tips</h3>
 <div class="status-box">
 <ol style="color:#aaa;font-size:13px;line-height:2;margin-left:20px">
 <li><strong>Improve Structured Data</strong> - Add FAQ, HowTo, and Product schema markup to help AI assistants understand your content.</li>
@@ -733,7 +937,7 @@ def render_geo_visibility(ctx):
 <li><strong>Monitor Brand Mentions</strong> - AI models often cite well-known brands; build authority through PR and guest posting.</li>
 </ol>
 <div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,#0d2137,#1a3a5c);border:1px solid #58a6ff;border-radius:10px">
-<p style="color:#58a6ff;font-weight:600">💡 GEO Insight</p>
+<p style="color:#58a6ff;font-weight:600">\U0001f4a1 GEO Insight</p>
 <p style="color:#aaa;font-size:13px">Generative Engine Optimization (GEO) focuses on being cited by AI search engines like ChatGPT, Claude, and Perplexity. Traditional SEO still matters, but GEO adds a new layer: content that's structured for AI consumption.</p>
 </div>
 </div>''')
@@ -744,7 +948,7 @@ def render_geo_visibility(ctx):
 def render_settings(ctx):
     last_sync = ctx.get("last_sync")
     sync_hist = ctx.get("sync_hist", [])
-    parts = ["<h2>🔄 Sync & Settings</h2><div class='grid-2'><div><h3>📡 Google Search Console Sync</h3><div class='status-box'>"]
+    parts = ["<h2>\U0001f504 Sync & Settings</h2><div class='grid-2'><div><h3>\U0001f4e1 Google Search Console Sync</h3><div class='status-box'>"]
     if last_sync:
         icon = "&#9989;" if last_sync.get("status") == "success" else "&#10060;" if last_sync.get("status") == "failed" else "&#128260;"
         parts.append(f'<div style="font-size:24px">{icon}</div>')
@@ -756,11 +960,11 @@ def render_settings(ctx):
     else:
         parts.append("<p>No syncs yet.</p>")
     parts.append('</div></div><div><h3>⏰ Auto-Sync Schedule</h3><div class="status-box">')
-    parts.append('<p>🕐 <strong>6:00 AM daily</strong> - Hermes cron job</p>')
+    parts.append('<p>\U0001f550 <strong>6:00 AM daily</strong> - Hermes cron job</p>')
     parts.append('<p style="color:#888;font-size:12px;margin-top:8px">Syncs GSC rankings, on-page errors, content ideas</p>')
-    parts.append('</div><h3>📁 Dashboard Info</h3><div class="status-box">')
-    parts.append('<p>📍 <strong>App:</strong> tinka-seo-dashboard.vercel.app</p>')
-    parts.append('<p>🗄️ <strong>Data:</strong> SQLite, auto-refreshes every 60s</p>')
+    parts.append('</div><h3>\U0001f4c1 Dashboard Info</h3><div class="status-box">')
+    parts.append('<p>\U0001f4cd <strong>App:</strong> tinka-seo-dashboard.vercel.app</p>')
+    parts.append('<p>\U0001f5c4\ufe0f <strong>Data:</strong> SQLite, auto-refreshes every 60s</p>')
     parts.append(f'<p>\U0001f3f7\ufe0f <strong>Version:</strong> v0.9 - Interactive Actions with Live Queue</p>')
     parts.append('</div></div></div>')
 
@@ -792,25 +996,48 @@ def render_settings(ctx):
             parts.append(f'<tr><td>{esc(s.get("source",""))}</td><td>{icon} {esc(s.get("status",""))}</td><td>{s.get("rows_synced") or "-"}</td><td>{esc(s.get("started_at",""))}</td><td>{esc(s.get("completed_at") or "-")}</td></tr>')
         parts.append('</tbody></table>')
 
-    parts.append('''<h3 style="margin-top:20px">📖 How to Use This Dashboard</h3>
+    parts.append('''<h3 style="margin-top:20px">\U0001f4d6 How to Use This Dashboard</h3>
 <div class="status-box">
 <p><strong>For the Site Owner (Non-Technical):</strong></p>
 <ol style="color:#aaa;font-size:13px;line-height:1.8;margin-left:20px">
-<li>🔑 <strong>Rankings tab</strong> - See where your keywords rank (Top 3, Top 10, etc.). Use the filter sidebar to view NZ or AU data separately. Select any keyword to see its position trend over time.</li>
-<li>🆕 <strong>New Keywords tab</strong> - Research-backed keywords you're not ranking for yet. High score = write content about these first.</li>
-<li>📊 <strong>Competitive tab</strong> - See which keywords are covered on NZ vs AU, and identify gaps where one site has data the other doesn't.</li>
-<li>🛠️ <strong>Issues tab</strong> - Technical problems found on your sites. Critical items hurt rankings - fix first.</li>
-<li>📝 <strong>Content tab</strong> - Blog post ideas ranked by opportunity score. Easy topics are quick wins.</li>
-<li>✍️ <strong>Content Studio tab</strong> - Track published articles and which keywords they target.</li>
-<li>🔍 <strong>Deep Audit tab</strong> - Full on-page audit findings grouped by severity.</li>
-<li>🌐 <strong>AI Visibility tab</strong> - GSC performance trends and GEO optimization tips for AI search engines.</li>
-<li>🔄 <strong>Settings tab</strong> - Data sync status, configuration, and this guide.</li>
+<li>\U0001f511 <strong>Rankings tab</strong> - See where your keywords rank (Top 3, Top 10, etc.). Use the filter sidebar to view NZ or AU data separately. Select any keyword to see its position trend over time.</li>
+<li>\U0001f195 <strong>New Keywords tab</strong> - Research-backed keywords you're not ranking for yet. High score = write content about these first.</li>
+<li>\U0001f4ca <strong>Competitive tab</strong> - See which keywords are covered on NZ vs AU, and identify gaps where one site has data the other doesn't.</li>
+<li>\U0001f6e0\ufe0f <strong>Issues tab</strong> - Technical problems found on your sites. Critical items hurt rankings - fix first.</li>
+<li>\U0001f4dd <strong>Content tab</strong> - Blog post ideas ranked by opportunity score. Easy topics are quick wins.</li>
+<li>\u270d\ufe0f <strong>Content Studio tab</strong> - Track published articles and which keywords they target.</li>
+<li>\U0001f50d <strong>Deep Audit tab</strong> - Full on-page audit findings grouped by severity.</li>
+<li>\U0001f310 <strong>AI Visibility tab</strong> - GSC performance trends and GEO optimization tips for AI search engines.</li>
+<li>\U0001f504 <strong>Settings tab</strong> - Data sync status, configuration, and this guide.</li>
 <li>The dashboard <strong>auto-refreshes every 60 seconds</strong> to show the latest data.</li>
 </ol>
 <p style="margin-top:12px;color:#888;font-size:12px">For technical updates, run <code>scripts/daily_sync.py --live --days 1</code> from the dashboard project directory, or rely on the daily 6 AM cron job.</p>
 </div>''')
 
     return "".join(parts)
+
+# ── AI Brief API endpoint ────────────────────────────────────────────────────
+@app.get("/api/generate-brief")
+async def generate_brief(keyword: str = ""):
+    if not keyword:
+        return {"error": "No keyword provided."}
+    try:
+        import subprocess, sys
+        script = PROJECT_DIR / "scripts" / "ai_content_suggestions.py"
+        if not script.exists():
+            return {"error": f"AI script not found at {script}"}
+        result = subprocess.run(
+            [sys.executable, str(script), "--keyword", keyword],
+            capture_output=True, text=True, timeout=30,
+        )
+        text = (result.stdout or result.stderr or "").strip()
+        if not text:
+            text = f"AI brief for '{keyword}' generated successfully. Check the script output for details."
+        return {"brief": text, "keyword": keyword}
+    except subprocess.TimeoutExpired:
+        return {"error": "AI brief generation timed out after 30 seconds."}
+    except Exception as e:
+        return {"error": str(e)}
 
 # ── Route ─────────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
@@ -822,6 +1049,7 @@ async def dashboard(
     keyword: str = None,
     sev: str = "All",
     effort: str = "All",
+    ai_kw: str = None,
 ):
     domains = fetch("SELECT name FROM domains WHERE is_active=1")
     cats = fetch("SELECT DISTINCT category FROM keywords ORDER BY category")
@@ -859,6 +1087,11 @@ async def dashboard(
     quick_wins, quick_losses, quick_wins_all = [], [], []
     keyword_list, kw_display = [], []
     trend_chart = ""
+    kw_rank_changes = {}
+    heatmap_html = ""
+    topical_html = ""
+    wl_risers = []
+    wl_fallers = []
 
     if kw_rows:
         poses = [sf(r["current_position"]) for r in kw_rows if r["current_position"]]
@@ -899,6 +1132,63 @@ async def dashboard(
             fig.update_layout(title="Opportunity Score Distribution",
                               font_color="#ccc", margin=dict(l=0, r=0, t=30, b=0))
             kw_charts["opp_dist"] = fig_to_html(fig)
+
+        # Daily Winners & Losers (yesterday vs today position change)
+        dates_avail = sorted(set(
+            r["date"] for r in fetch("SELECT DISTINCT date FROM rank_history ORDER BY date")
+        ))
+        if len(dates_avail) >= 2:
+            today_str = dates_avail[-1]
+            yesterday_str = dates_avail[-2]
+            today_rh = fetch(
+                "SELECT keyword_id, position FROM rank_history WHERE date = ?",
+                [today_str]
+            )
+            yesterday_rh = fetch(
+                "SELECT keyword_id, position FROM rank_history WHERE date = ?",
+                [yesterday_str]
+            )
+            today_map = {r["keyword_id"]: r["position"] for r in today_rh}
+            yesterday_map = {r["keyword_id"]: r["position"] for r in yesterday_rh}
+
+            for r in kw_rows:
+                kw_id = r["id"]
+                today_pos = sf(today_map.get(kw_id))
+                yesterday_pos = sf(yesterday_map.get(kw_id))
+                change = None
+                is_new = False
+                if today_pos > 0 and yesterday_pos > 0:
+                    change = int(yesterday_pos - today_pos)
+                elif today_pos > 0 and not yesterday_pos:
+                    is_new = True
+                    change = None
+
+                kw_rank_changes[str(kw_id)] = {
+                    "change": change,
+                    "is_new": is_new,
+                    "today_pos": today_pos,
+                    "yesterday_pos": yesterday_pos,
+                }
+
+            # Top 5 risers and fallers
+            daily_changes = []
+            for r in kw_rows:
+                kw_id = r["id"]
+                rc = kw_rank_changes.get(str(kw_id), {})
+                chg = rc.get("change")
+                if chg is not None:
+                    daily_changes.append({
+                        "keyword": r["keyword"],
+                        "domain": r["domain"],
+                        "change": chg,
+                        "current_pos": rc.get("today_pos", 0),
+                    })
+            risers = sorted([d for d in daily_changes if d["change"] > 0],
+                            key=lambda x: x["change"], reverse=True)[:5]
+            fallers = sorted([d for d in daily_changes if d["change"] < 0],
+                             key=lambda x: x["change"])[:5]
+            wl_risers = risers
+            wl_fallers = fallers
 
         # Winners & Losers (position change over 30 days)
         days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -975,6 +1265,99 @@ async def dashboard(
                        "Clicks": si(r["clicks"]), "Imp": si(r["impressions"])}
                       for r in kw_rows]
 
+        # ── Rank Position Heatmap (Phase 1.5) ────────────────────────────
+        try:
+            # Get the last 14 dates and all keywords with positions
+            rh_data = fetch(
+                f"""SELECT k.id, k.keyword, rh.date, rh.position
+                    FROM rank_history rh
+                    JOIN keywords k ON rh.keyword_id = k.id
+                    JOIN domains d ON k.domain_id = d.id
+                    {where.replace('k.', 'k.') if where else ''}
+                    AND rh.date >= date('now', '-14 days')
+                    ORDER BY rh.date"""
+            )
+            if rh_data:
+                heat_dates = sorted(set(r["date"] for r in rh_data))
+                # Limit to keywords with meaningful positions
+                heat_keywords = list(dict.fromkeys(
+                    r["keyword"] for r in rh_data if sf(r["position"]) > 0
+                ))[:25]  # Limit to 25 keywords max
+                if heat_keywords and heat_dates:
+                    # Build heatmap matrix
+                    heat_map = {}
+                    for r in rh_data:
+                        if r["keyword"] in heat_keywords and sf(r["position"]) > 0:
+                            heat_map.setdefault(r["keyword"], {}).setdefault(r["date"], sf(r["position"]))
+                    z_data = []
+                    for kw in heat_keywords:
+                        row = [heat_map.get(kw, {}).get(d, None) for d in heat_dates]
+                        z_data.append(row)
+
+                    colorscale = [
+                        [0.0, "#4ecdc4"],   # 1-3: green
+                        [0.2, "#4ecdc4"],
+                        [0.2, "#ffcc00"],   # 4-10: amber
+                        [0.6, "#ffcc00"],
+                        [0.6, "#ff8800"],   # 11-20: orange
+                        [0.8, "#ff8800"],
+                        [0.8, "#ff4444"],   # 21+: red
+                        [1.0, "#ff4444"],
+                    ]
+                    fig = go.Figure(data=go.Heatmap(
+                        z=z_data, x=heat_dates, y=heat_keywords,
+                        colorscale=colorscale,
+                        zmin=1, zmax=30,
+                        hovertemplate="Keyword: %{y}<br>Date: %{x}<br>Position: %{z}<extra></extra>"
+                    ))
+                    fig.update_layout(
+                        title="Keyword Rank Positions (14-day view)",
+                        xaxis=dict(side="top", tickangle=-45),
+                        yaxis=dict(autorange="reversed"),
+                        height=400 + len(heat_keywords) * 12,
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        font_color="#ccc",
+                        margin=dict(l=120, r=20, t=60, b=0),
+                    )
+                    heatmap_html = fig_to_html(fig, height=400 + len(heat_keywords) * 12)
+        except Exception as e:
+            print(f"Heatmap error: {e}")
+            heatmap_html = ""
+
+        # ── Topical Authority Bar Chart (Phase 7.3) ──────────────────────────
+        try:
+            ta_data = fetch(
+                "SELECT cluster_name, total_keywords, keywords_ranked, content_coverage, topical_authority "
+                "FROM topical_authority ORDER BY topical_authority DESC LIMIT 15"
+            )
+            if ta_data:
+                names = [r["cluster_name"] for r in ta_data]
+                scores_ta = [sf(r["topical_authority"]) for r in ta_data]
+                fig = go.Figure(data=[go.Bar(
+                    x=scores_ta, y=names, orientation="h",
+                    marker=dict(
+                        color=scores_ta,
+                        colorscale="Viridis",
+                        showscale=True,
+                        colorbar=dict(title="Authority", len=0.6),
+                    ),
+                )])
+                fig.update_layout(
+                    title="Top 15 Clusters by Topical Authority Score",
+                    xaxis_title="Authority Score",
+                    yaxis=dict(autorange="reversed"),
+                    height=400,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font_color="#ccc",
+                    margin=dict(l=150, r=40, t=40, b=20),
+                )
+                topical_html = fig_to_html(fig, height=400)
+        except Exception as e:
+            print(f"Topical authority error: {e}")
+            topical_html = ""
+
     # ═══ NEW KEYWORD OPPORTUNITIES ════════════════════════════════════════
     newkw_rows = fetch(
         f"""SELECT k.id, d.name AS domain, k.keyword, k.category, k.intent,
@@ -1019,6 +1402,8 @@ async def dashboard(
         p2,
     )
     issues_metrics, issues_charts = {}, {}
+    health_gauge_html = ""
+    health_metrics = {}
     if issue_rows:
         open_ = [r for r in issue_rows if r["status"] == "open"]
         issues_metrics = {
@@ -1046,6 +1431,74 @@ async def dashboard(
                               paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#ccc")
             issues_charts["dom_bar"] = fig_to_html(fig, 300)
 
+        # ── Site Health Gauge (Phase 5.2) ──────────────────────────────────
+        try:
+            health_row = get_one(
+                "SELECT health_score, grade, total_open, total_fixed, "
+                "critical_score, high_score, moderate_score, freshness_score "
+                "FROM site_health_snapshots ORDER BY created_at DESC LIMIT 1"
+            )
+            if health_row:
+                score = sf(health_row.get("health_score", 0))
+                grade = health_row.get("grade", "N/A")
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number+delta",
+                    value=score,
+                    title={"text": f"Site Health - Grade {grade}"},
+                    delta={"reference": 75, "increasing": {"color": "#00d4aa"}},
+                    gauge={
+                        "axis": {"range": [0, 100], "tickcolor": "#ccc"},
+                        "bar": {"color": "#00d4aa"},
+                        "steps": [
+                            {"range": [0, 60], "color": "#4a1a1a"},
+                            {"range": [60, 75], "color": "#4a3a1a"},
+                            {"range": [75, 90], "color": "#1a3a2a"},
+                            {"range": [90, 100], "color": "#1a4a2e"},
+                        ],
+                        "threshold": {
+                            "line": {"color": "#ff6b6b", "width": 4},
+                            "thickness": 0.75,
+                            "value": 60,
+                        },
+                    },
+                ))
+                fig.update_layout(
+                    height=250,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font={"color": "#ccc", "size": 12},
+                    margin=dict(l=20, r=20, t=40, b=0),
+                )
+                health_gauge_html = fig_to_html(fig, height=250)
+
+                # Open/fixed counts per severity
+                all_issues = fetch("SELECT severity, status FROM onpage_errors")
+                open_counts = defaultdict(int)
+                fixed_counts = defaultdict(int)
+                for ri in all_issues:
+                    if ri["status"] == "open":
+                        open_counts[ri["severity"]] += 1
+                    elif ri["status"] == "fixed":
+                        fixed_counts[ri["severity"]] += 1
+
+                # Determine grade letter
+                if score >= 90:
+                    grade_letter = "A"
+                elif score >= 75:
+                    grade_letter = "B"
+                elif score >= 60:
+                    grade_letter = "C"
+                else:
+                    grade_letter = "D"
+
+                health_metrics = {
+                    "score": score,
+                    "grade": grade_letter,
+                    "open_counts": dict(open_counts),
+                    "fixed_counts": dict(fixed_counts),
+                }
+        except Exception as e:
+            print(f"Health gauge error: {e}")
+
     # ═══ CONTENT ═════════════════════════════════════════════════════════
     w3, p3 = [], []
     if category != "All": w3.append("ci.category = ?"); p3.append(category)
@@ -1061,6 +1514,7 @@ async def dashboard(
         p3,
     )
     ideas_metrics, ideas_charts, top_picks, ideas_display = {}, {}, [], []
+    funnel_html = ""
     if ideas_rows:
         sc2 = [sf(r["opportunity_score"]) for r in ideas_rows]
         ideas_metrics = {
@@ -1068,7 +1522,7 @@ async def dashboard(
             "avg_score": round(sum(sc2)/len(sc2), 1) if sc2 else 0,
             "total_searches": sum(si(r["estimated_searches"]) for r in ideas_rows),
         }
-        # Matrix chart — assign each category a numeric color index
+        # Matrix chart
         _cats = sorted({r["category"] for r in ideas_rows})
         _cat_colors = {c: i for i, c in enumerate(_cats)}
         _palette = ["#ff6b6b", "#4ecdc4", "#ffe66d", "#95e1d3", "#f38181",
@@ -1116,6 +1570,32 @@ async def dashboard(
                           "Category": r["category"], "Searches": si(r["estimated_searches"]),
                           "Score": round(sf(r["opportunity_score"]), 1),
                           "Effort": r["effort"], "Type": r["content_type"]} for r in ideas_rows]
+
+        # ── Pipeline Funnel Chart (Phase 4.3) ──────────────────────────────
+        try:
+            stage_counts = fetch(
+                "SELECT stage, COUNT(*) as cnt FROM content_ideas GROUP BY stage ORDER BY stage"
+            )
+            if stage_counts:
+                stages = [r["stage"] for r in stage_counts]
+                counts = [r["cnt"] for r in stage_counts]
+                fig = go.Figure(go.Funnel(
+                    y=stages,
+                    x=counts,
+                    textinfo="value+percent initial",
+                    marker={"color": ["#58a6ff", "#00d4aa", "#ffcc00", "#ff8800", "#ff6b6b"][:len(stages)]},
+                ))
+                fig.update_layout(
+                    title="Content Pipeline by Stage",
+                    height=300,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font_color="#ccc",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                funnel_html = fig_to_html(fig, height=300)
+        except Exception as e:
+            print(f"Funnel error: {e}")
+            funnel_html = ""
 
     # ═══ COMPETITIVE ANALYSIS ═════════════════════════════════════════════
     comp_rows = fetch(
@@ -1201,6 +1681,26 @@ async def dashboard(
     open_issue_count = issues_metrics.get("open", 0)
     idea_count = ideas_metrics.get("count", 0)
 
+    # ═══ AI BRIEF from query param ═══════════════════════════════════════
+    ai_brief_text = ""
+    ai_brief_keyword = ai_kw or ""
+    if ai_kw:
+        try:
+            import subprocess, sys
+            script = PROJECT_DIR / "scripts" / "ai_content_suggestions.py"
+            if script.exists():
+                result = subprocess.run(
+                    [sys.executable, str(script), "--keyword", ai_kw],
+                    capture_output=True, text=True, timeout=30,
+                )
+                ai_brief_text = (result.stdout or result.stderr or "").strip()
+                if not ai_brief_text:
+                    ai_brief_text = "AI brief generated for: " + ai_kw
+            else:
+                ai_brief_text = f"AI script not available. Brief queued for: {ai_kw}"
+        except Exception as e:
+            ai_brief_text = f"Error generating brief: {e}"
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     html = render_page(
         now=now, filters=filters,
@@ -1212,10 +1712,16 @@ async def dashboard(
         quick_wins=quick_wins, quick_losses=quick_losses, quick_wins_all=quick_wins_all,
         keyword_list=keyword_list, trend_chart=trend_chart,
         kw_display=kw_display,
+        kw_rank_changes=kw_rank_changes,
+        wl_risers=wl_risers, wl_fallers=wl_fallers,
+        heatmap_html=heatmap_html, topical_html=topical_html,
         newkw_rows=newkw_rows, newkw_metrics=newkw_metrics, newkw_picks=newkw_picks,
         issue_rows=issue_rows, issues_metrics=issues_metrics, issues_charts=issues_charts,
+        health_gauge_html=health_gauge_html, health_metrics=health_metrics,
         ideas_rows=ideas_rows, ideas_metrics=ideas_metrics, ideas_charts=ideas_charts,
         top_picks=top_picks, ideas_display=ideas_display,
+        funnel_html=funnel_html,
+        ai_brief_text=ai_brief_text, ai_brief_keyword=ai_brief_keyword,
         comp_rows=comp_rows, gap_rows=gap_enriched,
         articles=articles,
         audit_findings=audit_findings, audit_metrics=audit_metrics,
